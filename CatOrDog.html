@@ -1,0 +1,817 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
+
+<meta charset="utf-8">
+<meta name="generator" content="quarto-1.2.269">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+
+<meta name="author" content="Andrew Holding">
+
+<title>Writing your own AI image classifier in R</title>
+<style>
+code{white-space: pre-wrap;}
+span.smallcaps{font-variant: small-caps;}
+div.columns{display: flex; gap: min(4vw, 1.5em);}
+div.column{flex: auto; overflow-x: auto;}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+ul.task-list li input[type="checkbox"] {
+  width: 0.8em;
+  margin: 0 0.8em 0.2em -1.6em;
+  vertical-align: middle;
+}
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+  { counter-reset: source-line 0; }
+pre.numberSource code > span
+  { position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+  { content: counter(source-line);
+    position: relative; left: -1em; text-align: right; vertical-align: baseline;
+    border: none; display: inline-block;
+    -webkit-touch-callout: none; -webkit-user-select: none;
+    -khtml-user-select: none; -moz-user-select: none;
+    -ms-user-select: none; user-select: none;
+    padding: 0 4px; width: 4em;
+    color: #aaaaaa;
+  }
+pre.numberSource { margin-left: 3em; border-left: 1px solid #aaaaaa;  padding-left: 4px; }
+div.sourceCode
+  {   }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
+code span.al { color: #ff0000; font-weight: bold; } /* Alert */
+code span.an { color: #60a0b0; font-weight: bold; font-style: italic; } /* Annotation */
+code span.at { color: #7d9029; } /* Attribute */
+code span.bn { color: #40a070; } /* BaseN */
+code span.bu { color: #008000; } /* BuiltIn */
+code span.cf { color: #007020; font-weight: bold; } /* ControlFlow */
+code span.ch { color: #4070a0; } /* Char */
+code span.cn { color: #880000; } /* Constant */
+code span.co { color: #60a0b0; font-style: italic; } /* Comment */
+code span.cv { color: #60a0b0; font-weight: bold; font-style: italic; } /* CommentVar */
+code span.do { color: #ba2121; font-style: italic; } /* Documentation */
+code span.dt { color: #902000; } /* DataType */
+code span.dv { color: #40a070; } /* DecVal */
+code span.er { color: #ff0000; font-weight: bold; } /* Error */
+code span.ex { } /* Extension */
+code span.fl { color: #40a070; } /* Float */
+code span.fu { color: #06287e; } /* Function */
+code span.im { color: #008000; font-weight: bold; } /* Import */
+code span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Information */
+code span.kw { color: #007020; font-weight: bold; } /* Keyword */
+code span.op { color: #666666; } /* Operator */
+code span.ot { color: #007020; } /* Other */
+code span.pp { color: #bc7a00; } /* Preprocessor */
+code span.sc { color: #4070a0; } /* SpecialChar */
+code span.ss { color: #bb6688; } /* SpecialString */
+code span.st { color: #4070a0; } /* String */
+code span.va { color: #19177c; } /* Variable */
+code span.vs { color: #4070a0; } /* VerbatimString */
+code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warning */
+</style>
+
+
+<script src="CatOrDog_files/libs/clipboard/clipboard.min.js"></script>
+<script src="CatOrDog_files/libs/quarto-html/quarto.js"></script>
+<script src="CatOrDog_files/libs/quarto-html/popper.min.js"></script>
+<script src="CatOrDog_files/libs/quarto-html/tippy.umd.min.js"></script>
+<script src="CatOrDog_files/libs/quarto-html/anchor.min.js"></script>
+<link href="CatOrDog_files/libs/quarto-html/tippy.css" rel="stylesheet">
+<link href="CatOrDog_files/libs/quarto-html/quarto-syntax-highlighting.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<script src="CatOrDog_files/libs/bootstrap/bootstrap.min.js"></script>
+<link href="CatOrDog_files/libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
+<link href="CatOrDog_files/libs/bootstrap/bootstrap.min.css" rel="stylesheet" id="quarto-bootstrap" data-mode="light">
+
+
+</head>
+
+<body class="fullcontent">
+
+<div id="quarto-content" class="page-columns page-rows-contents page-layout-article">
+
+<main class="content" id="quarto-document-content">
+
+<header id="title-block-header" class="quarto-title-block default">
+<div class="quarto-title">
+<h1 class="title">Writing your own AI image classifier in R</h1>
+</div>
+
+
+
+<div class="quarto-title-meta">
+
+    <div>
+    <div class="quarto-title-meta-heading">Author</div>
+    <div class="quarto-title-meta-contents">
+             <p>Andrew Holding </p>
+          </div>
+  </div>
+    
+  
+    
+  </div>
+  
+
+</header>
+
+<section id="writing-your-own-ai-image-classifier-in-r" class="level1">
+<h1>Writing your own AI image classifier in R</h1>
+<section id="introduction" class="level2">
+<h2 class="anchored" data-anchor-id="introduction">Introduction</h2>
+<p>The aim of this tutorial is to provide you with the tools to generate an AI that can classify a set of images into one of two different categories. The code below will learn to classify an image as either ‘cat’ or ‘dog’, using a public set of 2000 images to train and another 1000 to validate. For the first part of the tutorial, we will apply a form of machine learning called logistic regression. For the second part we will introduce how to use a convolutional neural network (CNN) in place of the the logistic regression for more accuracy.</p>
+<p><strong>An important technicality</strong>: logistic regression can be thought of as the simplest form of AI, as logistic regression is very similar to AI but with a single layer. This similarity makes logistic regression a good starting point for introducing the concepts needed for AI methods, and when we get to the point of introducing more layers into the algorithm hopefully these concepts of what a layer is will be more clear. However, since a feature of an AI is the use of multiple layers, we should use the more general term of machine learning to formally describe logistic regression.</p>
+</section>
+<section id="configuring-a-machine-learning-environment-in-r" class="level2">
+<h2 class="anchored" data-anchor-id="configuring-a-machine-learning-environment-in-r">Configuring a machine learning environment in R</h2>
+<p>As much of the teaching up to this point is in R, we wrote this tutorial with R users in mind; however, much of the AI work is easiest using tools written in Python, e.g.&nbsp;TensorFlow. To work around this challenge, we use the following packages, in particular a package called ‘reticulate’, that enables the use of Python packages in R. The block of code below will install the R packages we need for this tutorial, if not installed, and then load them.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb1"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="co"># List of packages to check and install if missing</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>packages_to_install <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="st">"keras"</span>, <span class="st">"tensorflow"</span>, <span class="st">"raster"</span>, <span class="st">"reticulate"</span>)</span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="co"># Check if each package is installed, and install it if missing</span></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> (package <span class="cf">in</span> packages_to_install) {</span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>  <span class="cf">if</span> (<span class="sc">!</span><span class="fu">requireNamespace</span>(package, <span class="at">quietly =</span> <span class="cn">TRUE</span>)) {</span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>    <span class="fu">install.packages</span>(package)</span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>  }</span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a>  <span class="fu">library</span>(package, <span class="at">character.only =</span> <span class="cn">TRUE</span>)</span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a>}</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stderr">
+<pre><code>The legacy packages maptools, rgdal, and rgeos, underpinning the sp package,
+which was just loaded, will retire in October 2023.
+Please refer to R-spatial evolution reports for details, especially
+https://r-spatial.org/r/2023/05/15/evolution4.html.
+It may be desirable to make the sf package available;
+package maintainers should consider adding sf to Suggests:.
+The sp package is now running under evolution status 2
+     (status 2 uses the sf package in place of rgdal)</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Loading required package: sp</code></pre>
+</div>
+</div>
+<p>Once the packages are installed you may need to install the following Python on your computer too. It’s best to run these manually and then restart R. Once installed you don’t need to rerun this code.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb4"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Download and install necessary Python packages (if needed)</span></span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a><span class="co"># within python used by R</span></span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a><span class="co">#</span></span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a><span class="co"># install_tensorflow() </span></span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a><span class="co"># py_install("pillow")</span></span>
+<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a><span class="co"># py_install("scipy")</span></span>
+<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a><span class="co"># py_install("keras")</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+</section>
+<section id="downloading-the-training-and-validation-data" class="level2">
+<h2 class="anchored" data-anchor-id="downloading-the-training-and-validation-data">Downloading the training and validation data</h2>
+<p>We need to download the images to train and validate our logistic regression model. The download contains two sets of images, the first is the training set, and the second is the validation set. We must not use the validation images for training, as if our model has already seen the images in training, during our validation we can run into a problem called over-fitting. Over-fitting is where our model has learnt to recognize the images too specifically, and when we try to classify new images the classifier does poorly because the model has learnt not to look for the general features but the exact images themselves. We’ll discuss this again at the training step.<br>
+<br>
+The code block below will download the images to you desktop.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb5"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Define the folder name</span></span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a>catdog_folder_path <span class="ot">&lt;-</span> <span class="st">"CatDog"</span></span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a><span class="co"># Check if the folder doesn't exist, then create it</span></span>
+<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> (<span class="sc">!</span><span class="fu">file.exists</span>(catdog_folder_path)) {</span>
+<span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">dir.create</span>(catdog_folder_path)</span>
+<span id="cb5-7"><a href="#cb5-7" aria-hidden="true" tabindex="-1"></a>  <span class="fu">cat</span>(<span class="st">"Created folder:"</span>, catdog_folder_path, <span class="st">"</span><span class="sc">\n</span><span class="st">"</span>)</span>
+<span id="cb5-8"><a href="#cb5-8" aria-hidden="true" tabindex="-1"></a>} <span class="cf">else</span> {</span>
+<span id="cb5-9"><a href="#cb5-9" aria-hidden="true" tabindex="-1"></a>  <span class="fu">cat</span>(<span class="st">"Folder already exists:"</span>, catdog_folder_path, <span class="st">"</span><span class="sc">\n</span><span class="st">"</span>)</span>
+<span id="cb5-10"><a href="#cb5-10" aria-hidden="true" tabindex="-1"></a>}</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Folder already exists: CatDog </code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb7"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Download the dataset</span></span>
+<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a>url <span class="ot">&lt;-</span> <span class="st">"https://storage.googleapis.com/mledu-datasets/cats_and_dogs_filtered.zip"</span></span>
+<span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a>zip_file <span class="ot">&lt;-</span> <span class="st">"cats_and_dogs_filtered.zip"</span></span>
+<span id="cb7-4"><a href="#cb7-4" aria-hidden="true" tabindex="-1"></a><span class="fu">download.file</span>(url, zip_file)</span>
+<span id="cb7-5"><a href="#cb7-5" aria-hidden="true" tabindex="-1"></a><span class="fu">unzip</span>(zip_file, <span class="at">exdir =</span> <span class="st">"cats_and_dogs_dataset"</span>)</span>
+<span id="cb7-6"><a href="#cb7-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-7"><a href="#cb7-7" aria-hidden="true" tabindex="-1"></a><span class="co"># Define the directories for training and validation data</span></span>
+<span id="cb7-8"><a href="#cb7-8" aria-hidden="true" tabindex="-1"></a>train_dir <span class="ot">&lt;-</span> <span class="st">"cats_and_dogs_dataset/cats_and_dogs_filtered/train"</span></span>
+<span id="cb7-9"><a href="#cb7-9" aria-hidden="true" tabindex="-1"></a>validation_dir <span class="ot">&lt;-</span> <span class="st">"cats_and_dogs_dataset/cats_and_dogs_filtered/validation"</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+</section>
+<section id="configuring-training-and-validation-data-sets" class="level2">
+<h2 class="anchored" data-anchor-id="configuring-training-and-validation-data-sets">Configuring training and validation data sets</h2>
+<p>Next, we load the training and validation sets. In this case, the training and validation data sets have a folder of ‘cats’ and ‘dogs’. If you look into these folders, you will find a series of dog or cat images that match the folder name.</p>
+<p>The first set of this code block is to set up the ‘image_data_generator’. This function can do more than we use it for here, for now; however, we’re just using it to rescale the image pixels from 0-255 to 0-1.</p>
+<p>Traditionally a pixel is defined by three values for red, green and blue (R, G, B) measured as a whole number (integer) between 0 and 255. Bright red is (255,0,0), and dark purple would be (128,0,128). For our code, we want each pixel’s data in the format of 0 to 1 as a decimal as red=(1,0,0) or dark purple=(0.5,0,0.5). Using decimals between 0 and 1 is convenient in machine learning as 1 times 1 is never greater than 1, while 0 times 0 is never less than 0. 255 times 255; however, is much larger than 255.</p>
+<p>(The reason colours are usually stored as 0-255 is due to them being stored as 8-bit binary channels, (i.e.&nbsp;the largest number you can write with 8-bits is 11111111 = 255); however, you don’t need to understand that for this tutorial.)<br>
+<br>
+The next parameter is the batch size, this is our first hyperparameter, i.e.&nbsp;a parameter that defines how the machine learning learns. The smaller the batch size the slower the machine learning will run; however, the larger the batch size the more computationally intensive the process is. We use 32 here to keep things workable on a laptop. The reason GPUs, originally sold for computer games, are so popular for machine learning is they are able to process very large batch sizes.</p>
+<p>We then apply the ‘flow_images_from_directory’ command to define our two datasets. You’ll notice we specify the datagen, and we also provide a target size. The target size is important. We want our data all to be the same size, otherwise, if all the dog images are slightly larger the model may just start learning the size of the image instead of the contents of it. This process is all part of regularization, making the images as similar as possible except for the features we wish to learn. We also specify that the class mode is ‘binary’, i.e.&nbsp;we have two categories, ‘Dog’ or ‘Cat’.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb8"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Data Augmentation</span></span>
+<span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a>datagen <span class="ot">&lt;-</span> <span class="fu">image_data_generator</span>(</span>
+<span id="cb8-3"><a href="#cb8-3" aria-hidden="true" tabindex="-1"></a>  <span class="at">rescale =</span> <span class="dv">1</span><span class="sc">/</span><span class="dv">255</span>,            <span class="co"># Rescale pixel values to the range [0, 1]</span></span>
+<span id="cb8-4"><a href="#cb8-4" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb8-5"><a href="#cb8-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-6"><a href="#cb8-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-7"><a href="#cb8-7" aria-hidden="true" tabindex="-1"></a><span class="co"># Define the batch size</span></span>
+<span id="cb8-8"><a href="#cb8-8" aria-hidden="true" tabindex="-1"></a>batch_size <span class="ot">&lt;-</span> <span class="dv">32</span></span>
+<span id="cb8-9"><a href="#cb8-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-10"><a href="#cb8-10" aria-hidden="true" tabindex="-1"></a><span class="co"># Create data generators for training data</span></span>
+<span id="cb8-11"><a href="#cb8-11" aria-hidden="true" tabindex="-1"></a>train_datagen <span class="ot">&lt;-</span> <span class="fu">flow_images_from_directory</span>(</span>
+<span id="cb8-12"><a href="#cb8-12" aria-hidden="true" tabindex="-1"></a>  train_dir,</span>
+<span id="cb8-13"><a href="#cb8-13" aria-hidden="true" tabindex="-1"></a>  <span class="at">generator =</span> datagen,</span>
+<span id="cb8-14"><a href="#cb8-14" aria-hidden="true" tabindex="-1"></a>  <span class="at">target_size =</span> <span class="fu">c</span>(<span class="dv">150</span>, <span class="dv">150</span>),</span>
+<span id="cb8-15"><a href="#cb8-15" aria-hidden="true" tabindex="-1"></a>  <span class="at">batch_size =</span> batch_size,</span>
+<span id="cb8-16"><a href="#cb8-16" aria-hidden="true" tabindex="-1"></a>  <span class="at">class_mode =</span> <span class="st">"binary"</span>  </span>
+<span id="cb8-17"><a href="#cb8-17" aria-hidden="true" tabindex="-1"></a>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Found 2000 images belonging to 2 classes.</code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb10"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Create data generators for validation data</span></span>
+<span id="cb10-2"><a href="#cb10-2" aria-hidden="true" tabindex="-1"></a>validation_datagen <span class="ot">&lt;-</span> <span class="fu">flow_images_from_directory</span>(</span>
+<span id="cb10-3"><a href="#cb10-3" aria-hidden="true" tabindex="-1"></a>  validation_dir,</span>
+<span id="cb10-4"><a href="#cb10-4" aria-hidden="true" tabindex="-1"></a>  <span class="at">generator =</span> datagen,</span>
+<span id="cb10-5"><a href="#cb10-5" aria-hidden="true" tabindex="-1"></a>  <span class="at">target_size =</span> <span class="fu">c</span>(<span class="dv">150</span>, <span class="dv">150</span>),</span>
+<span id="cb10-6"><a href="#cb10-6" aria-hidden="true" tabindex="-1"></a>  <span class="at">batch_size =</span> batch_size,</span>
+<span id="cb10-7"><a href="#cb10-7" aria-hidden="true" tabindex="-1"></a>  <span class="at">class_mode =</span> <span class="st">"binary"</span> </span>
+<span id="cb10-8"><a href="#cb10-8" aria-hidden="true" tabindex="-1"></a>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Found 1000 images belonging to 2 classes.</code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb12"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Calculate the number of training samples</span></span>
+<span id="cb12-2"><a href="#cb12-2" aria-hidden="true" tabindex="-1"></a>n_train_samples <span class="ot">&lt;-</span> <span class="fu">length</span>(train_datagen<span class="sc">$</span>filenames)</span>
+<span id="cb12-3"><a href="#cb12-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-4"><a href="#cb12-4" aria-hidden="true" tabindex="-1"></a><span class="co"># Calculate the number of validation samples</span></span>
+<span id="cb12-5"><a href="#cb12-5" aria-hidden="true" tabindex="-1"></a>n_validation_samples <span class="ot">&lt;-</span> <span class="fu">length</span>(validation_datagen<span class="sc">$</span>filenames)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+</section>
+<section id="defining-the-model" class="level2">
+<h2 class="anchored" data-anchor-id="defining-the-model">Defining the model</h2>
+<p>For this example, we are defining a logistic regression model. These models take all the pixels from our image, defined as 150 x 150 pixels x 3 colours as defined in the last code block into the first layer and combine them into a single ‘sigmoid’ output. Sigmoid functions are very useful for binary classifiers as they take any number from -infinity to +infinity and convert it to a value of 0 to 1, i.e.&nbsp;a probability.</p>
+<p>The learning will then weigh how all the pixels contribute to the final value which is converted to the sigmoid function to a probability.</p>
+<p>Here we also define a a few hyperparameters. The learning rate is the speed at which the model updates the weighting of each pixel in the mode. A fast learning rate is not always good as it can lead the model to overshoot and never find the best weightings. Early stopping also enables the model to roll back to a better model if an overshoot happens.</p>
+<p>Finally, we compile the model. There are a few things here to improve our model from the start. The optimizer ‘optimizer_rmsprop’ is slightly smarter than the traditional stochastic gradient descent (SGD) ‘optimizer_sgd’ because RMSprop automates learning-rate tuning for us.</p>
+<p>The optimizer is the core part of what we’re about to do. Each time we run a batch of images through the model we will generate a loss which is a measure of how accurate the model is. The SGD would then look at how changing the weighting to each alters the loss (if you’ve done A-Level math, this can be done via differentiation), and steps an amount by the learning rate towards parameters that give lower loss. The process is repeated time and time again with different images to fine-tune the weightings. This process of adjusting the weights on the basis of the loss function is called backpropagation.</p>
+<p><br>
+<img src="images/image-1828620369.png" class="img-fluid" width="495"></p>
+<p><strong>Figure 1. Example logistic regression model.</strong><br>
+</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb13"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Define a logistic regression model - a simple first example</span></span>
+<span id="cb13-2"><a href="#cb13-2" aria-hidden="true" tabindex="-1"></a>model <span class="ot">&lt;-</span> <span class="fu">keras_model_sequential</span>() <span class="sc">%&gt;%</span></span>
+<span id="cb13-3"><a href="#cb13-3" aria-hidden="true" tabindex="-1"></a> <span class="fu">layer_flatten</span>(<span class="at">input_shape =</span> <span class="fu">c</span>(<span class="dv">150</span>, <span class="dv">150</span>, <span class="dv">3</span>)) <span class="sc">%&gt;%</span>  <span class="co"># Flatten the input image</span></span>
+<span id="cb13-4"><a href="#cb13-4" aria-hidden="true" tabindex="-1"></a> <span class="fu">layer_dense</span>(<span class="at">units =</span> <span class="dv">1</span>, <span class="at">activation =</span> <span class="st">"sigmoid"</span>) </span>
+<span id="cb13-5"><a href="#cb13-5" aria-hidden="true" tabindex="-1"></a>   <span class="co"># Single dense layer with sigmoid activation</span></span>
+<span id="cb13-6"><a href="#cb13-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb13-7"><a href="#cb13-7" aria-hidden="true" tabindex="-1"></a><span class="co"># Learning Rate Schedule with ReduceLRonPlateau</span></span>
+<span id="cb13-8"><a href="#cb13-8" aria-hidden="true" tabindex="-1"></a>reduce_lr <span class="ot">&lt;-</span> <span class="fu">callback_reduce_lr_on_plateau</span>(</span>
+<span id="cb13-9"><a href="#cb13-9" aria-hidden="true" tabindex="-1"></a>  <span class="at">monitor =</span> <span class="st">"val_loss"</span>,</span>
+<span id="cb13-10"><a href="#cb13-10" aria-hidden="true" tabindex="-1"></a>  <span class="at">factor =</span> <span class="fl">0.2</span>,</span>
+<span id="cb13-11"><a href="#cb13-11" aria-hidden="true" tabindex="-1"></a>  <span class="at">patience =</span> <span class="dv">5</span></span>
+<span id="cb13-12"><a href="#cb13-12" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb13-13"><a href="#cb13-13" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb13-14"><a href="#cb13-14" aria-hidden="true" tabindex="-1"></a><span class="co"># Early Stopping</span></span>
+<span id="cb13-15"><a href="#cb13-15" aria-hidden="true" tabindex="-1"></a>early_stop <span class="ot">&lt;-</span> <span class="fu">callback_early_stopping</span>(</span>
+<span id="cb13-16"><a href="#cb13-16" aria-hidden="true" tabindex="-1"></a>  <span class="at">monitor =</span> <span class="st">"val_loss"</span>,</span>
+<span id="cb13-17"><a href="#cb13-17" aria-hidden="true" tabindex="-1"></a>  <span class="at">patience =</span> <span class="dv">10</span>,</span>
+<span id="cb13-18"><a href="#cb13-18" aria-hidden="true" tabindex="-1"></a>  <span class="at">restore_best_weights =</span> <span class="cn">TRUE</span></span>
+<span id="cb13-19"><a href="#cb13-19" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb13-20"><a href="#cb13-20" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb13-21"><a href="#cb13-21" aria-hidden="true" tabindex="-1"></a><span class="co"># Compile the model</span></span>
+<span id="cb13-22"><a href="#cb13-22" aria-hidden="true" tabindex="-1"></a>model <span class="sc">%&gt;%</span> <span class="fu">compile</span>(</span>
+<span id="cb13-23"><a href="#cb13-23" aria-hidden="true" tabindex="-1"></a>  <span class="at">loss =</span> <span class="st">"binary_crossentropy"</span>,                      <span class="co"># Binary cross-entropy loss</span></span>
+<span id="cb13-24"><a href="#cb13-24" aria-hidden="true" tabindex="-1"></a>  <span class="at">optimizer =</span> <span class="fu">optimizer_rmsprop</span>(<span class="at">learning_rate =</span> <span class="fl">1e-3</span>),   <span class="co"># RMSprop optimizer </span></span>
+<span id="cb13-25"><a href="#cb13-25" aria-hidden="true" tabindex="-1"></a>  <span class="at">metrics =</span> <span class="fu">c</span>(<span class="st">"accuracy"</span>)                           <span class="co"># Monitor accuracy during training</span></span>
+<span id="cb13-26"><a href="#cb13-26" aria-hidden="true" tabindex="-1"></a>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+</section>
+<section id="training-the-model" class="level2">
+<h2 class="anchored" data-anchor-id="training-the-model">Training the model</h2>
+<p>With the model configured we can now train the model. As we do this R provides a plot of the loss function ouput (lower is better), the accuracy on the training set and accuracy on the validation set. And finally a plot of the learning rate, which is lowered as the scripts runs. The key new term here is ‘epoch’, an epoch is each time the training will run through the entire dataset.</p>
+<p>An important point to note is if the training set accuracy continues to increase but the validation set’s accuracy does not increase it looks like we are at risk of over-fitting, you can see this in the plots for our the data at around the 6th epoch. This problem is something we must avoid. By about epoch 11, the problem is very apparent. Despite the prediction accuracy on the training set continuing to improve the prediction of the validation data set is now getting worse.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb14"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb14-1"><a href="#cb14-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Train the logistic regression model with callbacks</span></span>
+<span id="cb14-2"><a href="#cb14-2" aria-hidden="true" tabindex="-1"></a>history <span class="ot">&lt;-</span> model <span class="sc">%&gt;%</span> <span class="fu">fit</span>(</span>
+<span id="cb14-3"><a href="#cb14-3" aria-hidden="true" tabindex="-1"></a>  train_datagen,</span>
+<span id="cb14-4"><a href="#cb14-4" aria-hidden="true" tabindex="-1"></a>  <span class="at">steps_per_epoch =</span> n_train_samples <span class="sc">/</span> batch_size,</span>
+<span id="cb14-5"><a href="#cb14-5" aria-hidden="true" tabindex="-1"></a>  <span class="at">epochs =</span> <span class="dv">20</span>,</span>
+<span id="cb14-6"><a href="#cb14-6" aria-hidden="true" tabindex="-1"></a>  <span class="at">validation_data =</span> validation_datagen,</span>
+<span id="cb14-7"><a href="#cb14-7" aria-hidden="true" tabindex="-1"></a>  <span class="at">validation_steps =</span> n_validation_samples <span class="sc">/</span> batch_size,</span>
+<span id="cb14-8"><a href="#cb14-8" aria-hidden="true" tabindex="-1"></a>  <span class="at">callbacks =</span> <span class="fu">list</span>(reduce_lr, early_stop)</span>
+<span id="cb14-9"><a href="#cb14-9" aria-hidden="true" tabindex="-1"></a>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Epoch 1/20
+62/62 - 10s - loss: 9.0445 - accuracy: 0.4812 - val_loss: 9.3792 - val_accuracy: 0.4990 - lr: 0.0010 - 10s/epoch - 164ms/step
+Epoch 2/20
+62/62 - 6s - loss: 7.1666 - accuracy: 0.5081 - val_loss: 2.3816 - val_accuracy: 0.5454 - lr: 0.0010 - 6s/epoch - 89ms/step
+Epoch 3/20
+62/62 - 6s - loss: 6.7851 - accuracy: 0.5025 - val_loss: 14.4111 - val_accuracy: 0.5020 - lr: 0.0010 - 6s/epoch - 89ms/step
+Epoch 4/20
+62/62 - 5s - loss: 6.6795 - accuracy: 0.5203 - val_loss: 8.4745 - val_accuracy: 0.4990 - lr: 0.0010 - 5s/epoch - 88ms/step
+Epoch 5/20
+62/62 - 5s - loss: 6.5292 - accuracy: 0.5234 - val_loss: 8.0934 - val_accuracy: 0.4990 - lr: 0.0010 - 5s/epoch - 88ms/step
+Epoch 6/20
+62/62 - 6s - loss: 6.8580 - accuracy: 0.5208 - val_loss: 3.5422 - val_accuracy: 0.5423 - lr: 0.0010 - 6s/epoch - 89ms/step
+Epoch 7/20
+62/62 - 5s - loss: 6.1264 - accuracy: 0.5422 - val_loss: 8.4680 - val_accuracy: 0.5060 - lr: 0.0010 - 5s/epoch - 87ms/step
+Epoch 8/20
+62/62 - 5s - loss: 1.5703 - accuracy: 0.6245 - val_loss: 1.4031 - val_accuracy: 0.5726 - lr: 2.0000e-04 - 5s/epoch - 88ms/step
+Epoch 9/20
+62/62 - 5s - loss: 1.3231 - accuracy: 0.6291 - val_loss: 1.7759 - val_accuracy: 0.5484 - lr: 2.0000e-04 - 5s/epoch - 88ms/step
+Epoch 10/20
+62/62 - 6s - loss: 1.2782 - accuracy: 0.6280 - val_loss: 2.3467 - val_accuracy: 0.5363 - lr: 2.0000e-04 - 6s/epoch - 89ms/step
+Epoch 11/20
+62/62 - 5s - loss: 1.2466 - accuracy: 0.6250 - val_loss: 1.4638 - val_accuracy: 0.5635 - lr: 2.0000e-04 - 5s/epoch - 87ms/step
+Epoch 12/20
+62/62 - 5s - loss: 1.1312 - accuracy: 0.6270 - val_loss: 1.0216 - val_accuracy: 0.5736 - lr: 2.0000e-04 - 5s/epoch - 86ms/step
+Epoch 13/20
+62/62 - 5s - loss: 1.1937 - accuracy: 0.6230 - val_loss: 1.3199 - val_accuracy: 0.5554 - lr: 2.0000e-04 - 5s/epoch - 87ms/step
+Epoch 14/20
+62/62 - 5s - loss: 1.1911 - accuracy: 0.6230 - val_loss: 0.9764 - val_accuracy: 0.5827 - lr: 2.0000e-04 - 5s/epoch - 88ms/step
+Epoch 15/20
+62/62 - 5s - loss: 1.1542 - accuracy: 0.6341 - val_loss: 2.0221 - val_accuracy: 0.5232 - lr: 2.0000e-04 - 5s/epoch - 88ms/step
+Epoch 16/20
+62/62 - 5s - loss: 1.1224 - accuracy: 0.6357 - val_loss: 1.6152 - val_accuracy: 0.5423 - lr: 2.0000e-04 - 5s/epoch - 88ms/step
+Epoch 17/20
+62/62 - 6s - loss: 1.0654 - accuracy: 0.6357 - val_loss: 2.4736 - val_accuracy: 0.5131 - lr: 2.0000e-04 - 6s/epoch - 89ms/step
+Epoch 18/20
+62/62 - 5s - loss: 1.2073 - accuracy: 0.5996 - val_loss: 1.2652 - val_accuracy: 0.5554 - lr: 2.0000e-04 - 5s/epoch - 88ms/step
+Epoch 19/20
+62/62 - 5s - loss: 1.1604 - accuracy: 0.6235 - val_loss: 1.4523 - val_accuracy: 0.5423 - lr: 2.0000e-04 - 5s/epoch - 89ms/step
+Epoch 20/20
+62/62 - 6s - loss: 0.5721 - accuracy: 0.7287 - val_loss: 0.9404 - val_accuracy: 0.5716 - lr: 4.0000e-05 - 6s/epoch - 89ms/step</code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb16"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb16-1"><a href="#cb16-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Plot the loss with each epoch</span></span>
+<span id="cb16-2"><a href="#cb16-2" aria-hidden="true" tabindex="-1"></a><span class="fu">plot</span>(history)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output-display">
+<p><img src="CatOrDog_files/figure-html/unnamed-chunk-6-1.png" class="img-fluid" width="672"></p>
+</div>
+</div>
+</section>
+<section id="testing-the-model" class="level2">
+<h2 class="anchored" data-anchor-id="testing-the-model">Testing the model</h2>
+<p>Technically there is no need for the next block of code as the validation set was test as part of the plot above. Nonetheless, I always recommend testing your data manually to visually determine if the results make sense. Here we run the model on the validation set and label a set of images for us to review. The model is only just above ~55% accurate (which isn’t very good) but it gets the answer right more often than chance which is something.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb17"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb17-1"><a href="#cb17-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Test the model </span></span>
+<span id="cb17-2"><a href="#cb17-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb17-3"><a href="#cb17-3" aria-hidden="true" tabindex="-1"></a>  batch <span class="ot">&lt;-</span> <span class="fu">generator_next</span>(validation_datagen)</span>
+<span id="cb17-4"><a href="#cb17-4" aria-hidden="true" tabindex="-1"></a>  images <span class="ot">&lt;-</span> batch[[<span class="dv">1</span>]]</span>
+<span id="cb17-5"><a href="#cb17-5" aria-hidden="true" tabindex="-1"></a>  labels <span class="ot">&lt;-</span> batch[[<span class="dv">2</span>]]</span>
+<span id="cb17-6"><a href="#cb17-6" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb17-7"><a href="#cb17-7" aria-hidden="true" tabindex="-1"></a>  <span class="cf">if</span>( <span class="fu">dim</span>(images)[<span class="dv">1</span>] <span class="sc">&gt;</span> <span class="dv">5</span>) {</span>
+<span id="cb17-8"><a href="#cb17-8" aria-hidden="true" tabindex="-1"></a>   predict_batch_size <span class="ot">&lt;-</span>  <span class="dv">5</span></span>
+<span id="cb17-9"><a href="#cb17-9" aria-hidden="true" tabindex="-1"></a>  } <span class="cf">else</span> {</span>
+<span id="cb17-10"><a href="#cb17-10" aria-hidden="true" tabindex="-1"></a>    predict_batch_size <span class="ot">&lt;-</span> <span class="fu">dim</span>(images)[<span class="dv">1</span>]</span>
+<span id="cb17-11"><a href="#cb17-11" aria-hidden="true" tabindex="-1"></a>  }</span>
+<span id="cb17-12"><a href="#cb17-12" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb17-13"><a href="#cb17-13" aria-hidden="true" tabindex="-1"></a>  predictions<span class="ot">&lt;-</span>model <span class="sc">%&gt;%</span> <span class="fu">predict</span>(images)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>1/1 - 0s - 90ms/epoch - 90ms/step</code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb19"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb19-1"><a href="#cb19-1" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> (n <span class="cf">in</span> <span class="dv">1</span><span class="sc">:</span>predict_batch_size) {</span>
+<span id="cb19-2"><a href="#cb19-2" aria-hidden="true" tabindex="-1"></a>  image <span class="ot">&lt;-</span> images[n,, , ]</span>
+<span id="cb19-3"><a href="#cb19-3" aria-hidden="true" tabindex="-1"></a>  label <span class="ot">&lt;-</span> labels[n]</span>
+<span id="cb19-4"><a href="#cb19-4" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb19-5"><a href="#cb19-5" aria-hidden="true" tabindex="-1"></a>  <span class="co"># Display the image and label</span></span>
+<span id="cb19-6"><a href="#cb19-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">dim</span>(image)</span>
+<span id="cb19-7"><a href="#cb19-7" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb19-8"><a href="#cb19-8" aria-hidden="true" tabindex="-1"></a>  <span class="cf">if</span> (label<span class="sc">==</span><span class="dv">1</span>) {label<span class="ot">=</span><span class="st">"Dog"</span>} <span class="cf">else</span> {label<span class="ot">=</span><span class="st">"Cat"</span>}</span>
+<span id="cb19-9"><a href="#cb19-9" aria-hidden="true" tabindex="-1"></a>  <span class="cf">if</span> (predictions[n] <span class="sc">&gt;</span> <span class="fl">0.5</span> ) {guess<span class="ot">=</span><span class="st">"Dog"</span>} <span class="cf">else</span> {guess<span class="ot">=</span><span class="st">"Cat"</span>}</span>
+<span id="cb19-10"><a href="#cb19-10" aria-hidden="true" tabindex="-1"></a>  bImage<span class="ot">&lt;-</span><span class="fu">brick</span>(image)</span>
+<span id="cb19-11"><a href="#cb19-11" aria-hidden="true" tabindex="-1"></a>  <span class="fu">crs</span>(bImage)<span class="ot">&lt;-</span><span class="st">"+proj=longlat"</span></span>
+<span id="cb19-12"><a href="#cb19-12" aria-hidden="true" tabindex="-1"></a>  <span class="fu">plotRGB</span>(bImage, <span class="at">colNA=</span><span class="dv">0</span>, <span class="at">scale=</span><span class="dv">1</span>, <span class="at">axes=</span><span class="cn">TRUE</span>, <span class="at">main=</span><span class="fu">paste0</span>(<span class="st">"Label: "</span>, label, <span class="st">",</span><span class="sc">\n</span><span class="st"> P="</span>, <span class="fu">round</span>(predictions[n],<span class="dv">2</span>), <span class="st">", Prediction: "</span>,guess))</span>
+<span id="cb19-13"><a href="#cb19-13" aria-hidden="true" tabindex="-1"></a>  <span class="fu">Sys.sleep</span>(<span class="dv">1</span>) </span>
+<span id="cb19-14"><a href="#cb19-14" aria-hidden="true" tabindex="-1"></a>}</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output-display">
+<p><img src="CatOrDog_files/figure-html/unnamed-chunk-7-1.png" class="img-fluid" width="672"></p>
+</div>
+<div class="cell-output-display">
+<p><img src="CatOrDog_files/figure-html/unnamed-chunk-7-2.png" class="img-fluid" width="672"></p>
+</div>
+<div class="cell-output-display">
+<p><img src="CatOrDog_files/figure-html/unnamed-chunk-7-3.png" class="img-fluid" width="672"></p>
+</div>
+<div class="cell-output-display">
+<p><img src="CatOrDog_files/figure-html/unnamed-chunk-7-4.png" class="img-fluid" width="672"></p>
+</div>
+<div class="cell-output-display">
+<p><img src="CatOrDog_files/figure-html/unnamed-chunk-7-5.png" class="img-fluid" width="672"></p>
+</div>
+</div>
+</section>
+<section id="improving-the-model-with-cnn-ai" class="level2">
+<h2 class="anchored" data-anchor-id="improving-the-model-with-cnn-ai">Improving the model with CNN (AI)</h2>
+<p>Logistic regression is very good at some classification questions; however, for our test data it is not performing well. We are therefore going to apply a CCN. There are many ways to design a CNN, and below is just one that works well for this challenge. The selection of hyper parameters, i.e.&nbsp;the number of layers, the size of each layer is complex. Here however we have use to convolution layers (these extract features of the image) and two pooling layers (these reduce the number of dimensions of the data). We then finish by flattening the data and using a sigmoid function at the end to obtain a value between 0-1. How a convolution layer works requires a bit of knowledge on matrix algebra that is well worth learning.<br>
+<br>
+The layers also need an activation function, this mimics the activation function of a neuron but for simplicity we use the ‘relu’ function over a more biologically accurate function. The function is very simple; if x &lt; 0 then the output f(x) = 0, if x &gt; 0 then f(x) = x. The neuron is only active if the input is positive, and then the strong the input the stronger the output.</p>
+<p>We have also included a dropout layer. The drop out layer randomly disables nodes in our neural net during the learning to help prevent over fitting.<br>
+<br>
+Once configured we run as before. Again we see some signs of over fitting, with the accuracy of the test data set reaching 100%. but validation set only reaches 70%.</p>
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><img src="images/image-1388631215.png" class="img-fluid figure-img"></p>
+<p></p><figcaption class="figure-caption"><strong>Figure 2. Simplified illustration of our CNN model.</strong></figcaption><p></p>
+</figure>
+</div>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb20"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb20-1"><a href="#cb20-1" aria-hidden="true" tabindex="-1"></a><span class="co">#Define CNN</span></span>
+<span id="cb20-2"><a href="#cb20-2" aria-hidden="true" tabindex="-1"></a><span class="co"># Convolutional layers</span></span>
+<span id="cb20-3"><a href="#cb20-3" aria-hidden="true" tabindex="-1"></a>modelCNN <span class="ot">&lt;-</span> <span class="fu">keras_model_sequential</span>() <span class="sc">%&gt;%</span></span>
+<span id="cb20-4"><a href="#cb20-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">layer_conv_2d</span>(<span class="at">filters =</span> <span class="dv">32</span>, <span class="at">kernel_size =</span> <span class="fu">c</span>(<span class="dv">3</span>, <span class="dv">3</span>),</span>
+<span id="cb20-5"><a href="#cb20-5" aria-hidden="true" tabindex="-1"></a>                <span class="at">activation =</span> <span class="st">"relu"</span>, <span class="at">input_shape =</span> <span class="fu">c</span>(<span class="dv">150</span>, <span class="dv">150</span>, <span class="dv">3</span>)) <span class="sc">%&gt;%</span></span>
+<span id="cb20-6"><a href="#cb20-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">layer_max_pooling_2d</span>(<span class="at">pool_size =</span> <span class="fu">c</span>(<span class="dv">2</span>, <span class="dv">2</span>)) <span class="sc">%&gt;%</span></span>
+<span id="cb20-7"><a href="#cb20-7" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb20-8"><a href="#cb20-8" aria-hidden="true" tabindex="-1"></a>  <span class="fu">layer_conv_2d</span>(<span class="at">filters =</span> <span class="dv">64</span>, <span class="at">kernel_size =</span> <span class="fu">c</span>(<span class="dv">3</span>, <span class="dv">3</span>), <span class="at">activation =</span> <span class="st">"relu"</span>) <span class="sc">%&gt;%</span></span>
+<span id="cb20-9"><a href="#cb20-9" aria-hidden="true" tabindex="-1"></a>  <span class="fu">layer_max_pooling_2d</span>(<span class="at">pool_size =</span> <span class="fu">c</span>(<span class="dv">2</span>, <span class="dv">2</span>)) <span class="sc">%&gt;%</span></span>
+<span id="cb20-10"><a href="#cb20-10" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb20-11"><a href="#cb20-11" aria-hidden="true" tabindex="-1"></a>  <span class="fu">layer_conv_2d</span>(<span class="at">filters =</span> <span class="dv">128</span>, <span class="at">kernel_size =</span> <span class="fu">c</span>(<span class="dv">3</span>, <span class="dv">3</span>), <span class="at">activation =</span> <span class="st">"relu"</span>) <span class="sc">%&gt;%</span></span>
+<span id="cb20-12"><a href="#cb20-12" aria-hidden="true" tabindex="-1"></a>  <span class="fu">layer_max_pooling_2d</span>(<span class="at">pool_size =</span> <span class="fu">c</span>(<span class="dv">2</span>, <span class="dv">2</span>)) <span class="sc">%&gt;%</span></span>
+<span id="cb20-13"><a href="#cb20-13" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb20-14"><a href="#cb20-14" aria-hidden="true" tabindex="-1"></a>  <span class="co"># Flatten layer</span></span>
+<span id="cb20-15"><a href="#cb20-15" aria-hidden="true" tabindex="-1"></a>  <span class="fu">layer_flatten</span>() <span class="sc">%&gt;%</span></span>
+<span id="cb20-16"><a href="#cb20-16" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb20-17"><a href="#cb20-17" aria-hidden="true" tabindex="-1"></a>  <span class="co"># Fully connected layers</span></span>
+<span id="cb20-18"><a href="#cb20-18" aria-hidden="true" tabindex="-1"></a>  <span class="fu">layer_dense</span>(<span class="at">units =</span> <span class="dv">512</span>, <span class="at">activation =</span> <span class="st">"relu"</span>) <span class="sc">%&gt;%</span></span>
+<span id="cb20-19"><a href="#cb20-19" aria-hidden="true" tabindex="-1"></a>  <span class="fu">layer_dropout</span>(<span class="fl">0.5</span>) <span class="sc">%&gt;%</span>  <span class="co"># Dropout for regularization</span></span>
+<span id="cb20-20"><a href="#cb20-20" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb20-21"><a href="#cb20-21" aria-hidden="true" tabindex="-1"></a>  <span class="co"># Output layer</span></span>
+<span id="cb20-22"><a href="#cb20-22" aria-hidden="true" tabindex="-1"></a>  <span class="fu">layer_dense</span>(<span class="at">units =</span> <span class="dv">1</span>, <span class="at">activation =</span> <span class="st">"sigmoid"</span>)</span>
+<span id="cb20-23"><a href="#cb20-23" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb20-24"><a href="#cb20-24" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb20-25"><a href="#cb20-25" aria-hidden="true" tabindex="-1"></a><span class="co"># Compile the model</span></span>
+<span id="cb20-26"><a href="#cb20-26" aria-hidden="true" tabindex="-1"></a>modelCNN <span class="sc">%&gt;%</span> <span class="fu">compile</span>(</span>
+<span id="cb20-27"><a href="#cb20-27" aria-hidden="true" tabindex="-1"></a>  <span class="at">loss =</span> <span class="st">"binary_crossentropy"</span>,                      <span class="co"># Binary cross-entropy loss</span></span>
+<span id="cb20-28"><a href="#cb20-28" aria-hidden="true" tabindex="-1"></a>    <span class="at">optimizer =</span> <span class="fu">optimizer_rmsprop</span>(<span class="at">learning_rate =</span> <span class="fl">1e-3</span>),   <span class="co"># RMSprop optimizer </span></span>
+<span id="cb20-29"><a href="#cb20-29" aria-hidden="true" tabindex="-1"></a>  <span class="at">metrics =</span> <span class="fu">c</span>(<span class="st">"accuracy"</span>)                           <span class="co"># Monitor accuracy during training</span></span>
+<span id="cb20-30"><a href="#cb20-30" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb20-31"><a href="#cb20-31" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb20-32"><a href="#cb20-32" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb20-33"><a href="#cb20-33" aria-hidden="true" tabindex="-1"></a><span class="co"># Train the logistic regression model with callbacks</span></span>
+<span id="cb20-34"><a href="#cb20-34" aria-hidden="true" tabindex="-1"></a>historyCNN <span class="ot">&lt;-</span> modelCNN <span class="sc">%&gt;%</span> <span class="fu">fit</span>(</span>
+<span id="cb20-35"><a href="#cb20-35" aria-hidden="true" tabindex="-1"></a>  train_datagen,</span>
+<span id="cb20-36"><a href="#cb20-36" aria-hidden="true" tabindex="-1"></a>  <span class="at">steps_per_epoch =</span> n_train_samples <span class="sc">/</span> batch_size,</span>
+<span id="cb20-37"><a href="#cb20-37" aria-hidden="true" tabindex="-1"></a>  <span class="at">epochs =</span> <span class="dv">20</span>,</span>
+<span id="cb20-38"><a href="#cb20-38" aria-hidden="true" tabindex="-1"></a>  <span class="at">validation_data =</span> validation_datagen,</span>
+<span id="cb20-39"><a href="#cb20-39" aria-hidden="true" tabindex="-1"></a>  <span class="at">validation_steps =</span> n_validation_samples <span class="sc">/</span> batch_size,</span>
+<span id="cb20-40"><a href="#cb20-40" aria-hidden="true" tabindex="-1"></a>  <span class="at">callbacks =</span> <span class="fu">list</span>(reduce_lr, early_stop)</span>
+<span id="cb20-41"><a href="#cb20-41" aria-hidden="true" tabindex="-1"></a>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Epoch 1/20
+62/62 - 36s - loss: 0.8294 - accuracy: 0.5025 - val_loss: 0.6926 - val_accuracy: 0.5020 - lr: 0.0010 - 36s/epoch - 580ms/step
+Epoch 2/20
+62/62 - 35s - loss: 0.6969 - accuracy: 0.5320 - val_loss: 0.6884 - val_accuracy: 0.5262 - lr: 0.0010 - 35s/epoch - 566ms/step
+Epoch 3/20
+62/62 - 35s - loss: 0.6612 - accuracy: 0.6098 - val_loss: 0.6371 - val_accuracy: 0.6391 - lr: 0.0010 - 35s/epoch - 571ms/step
+Epoch 4/20
+62/62 - 35s - loss: 0.6099 - accuracy: 0.6616 - val_loss: 0.6109 - val_accuracy: 0.6663 - lr: 0.0010 - 35s/epoch - 570ms/step
+Epoch 5/20
+62/62 - 35s - loss: 0.5832 - accuracy: 0.6997 - val_loss: 0.6030 - val_accuracy: 0.6633 - lr: 0.0010 - 35s/epoch - 565ms/step
+Epoch 6/20
+62/62 - 35s - loss: 0.5385 - accuracy: 0.7271 - val_loss: 0.5539 - val_accuracy: 0.7157 - lr: 0.0010 - 35s/epoch - 563ms/step
+Epoch 7/20
+62/62 - 35s - loss: 0.4883 - accuracy: 0.7581 - val_loss: 0.6777 - val_accuracy: 0.6663 - lr: 0.0010 - 35s/epoch - 565ms/step
+Epoch 8/20
+62/62 - 35s - loss: 0.4555 - accuracy: 0.7805 - val_loss: 0.5782 - val_accuracy: 0.7046 - lr: 0.0010 - 35s/epoch - 566ms/step
+Epoch 9/20
+62/62 - 35s - loss: 0.4153 - accuracy: 0.8079 - val_loss: 0.6534 - val_accuracy: 0.7077 - lr: 0.0010 - 35s/epoch - 564ms/step
+Epoch 10/20
+62/62 - 35s - loss: 0.3644 - accuracy: 0.8338 - val_loss: 0.6897 - val_accuracy: 0.7056 - lr: 0.0010 - 35s/epoch - 565ms/step
+Epoch 11/20
+62/62 - 35s - loss: 0.3107 - accuracy: 0.8623 - val_loss: 0.7541 - val_accuracy: 0.6925 - lr: 0.0010 - 35s/epoch - 564ms/step
+Epoch 12/20
+62/62 - 35s - loss: 0.1938 - accuracy: 0.9268 - val_loss: 0.6209 - val_accuracy: 0.7702 - lr: 2.0000e-04 - 35s/epoch - 565ms/step
+Epoch 13/20
+62/62 - 35s - loss: 0.1475 - accuracy: 0.9492 - val_loss: 0.6912 - val_accuracy: 0.7591 - lr: 2.0000e-04 - 35s/epoch - 568ms/step
+Epoch 14/20
+62/62 - 35s - loss: 0.1197 - accuracy: 0.9619 - val_loss: 0.7049 - val_accuracy: 0.7681 - lr: 2.0000e-04 - 35s/epoch - 565ms/step
+Epoch 15/20
+62/62 - 35s - loss: 0.0906 - accuracy: 0.9726 - val_loss: 0.7564 - val_accuracy: 0.7621 - lr: 2.0000e-04 - 35s/epoch - 567ms/step
+Epoch 16/20
+62/62 - 35s - loss: 0.0720 - accuracy: 0.9827 - val_loss: 0.7945 - val_accuracy: 0.7722 - lr: 2.0000e-04 - 35s/epoch - 569ms/step</code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb22"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb22-1"><a href="#cb22-1" aria-hidden="true" tabindex="-1"></a><span class="fu">plot</span>(historyCNN)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output-display">
+<p><img src="CatOrDog_files/figure-html/unnamed-chunk-8-1.png" class="img-fluid" width="672"></p>
+</div>
+</div>
+</section>
+<section id="testing-the-cnn" class="level2">
+<h2 class="anchored" data-anchor-id="testing-the-cnn">Testing the CNN</h2>
+<p>We can use exactly the same code as before to test out model. The CNN in this version gets more like 70% accuracy, much improved over the logistic regression model we tried. The improvement results in many more of the images being correctly annotated in the validation set.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb23"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb23-1"><a href="#cb23-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Test the new model </span></span>
+<span id="cb23-2"><a href="#cb23-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb23-3"><a href="#cb23-3" aria-hidden="true" tabindex="-1"></a>  batch <span class="ot">&lt;-</span> <span class="fu">generator_next</span>(validation_datagen)</span>
+<span id="cb23-4"><a href="#cb23-4" aria-hidden="true" tabindex="-1"></a>  images <span class="ot">&lt;-</span> batch[[<span class="dv">1</span>]]</span>
+<span id="cb23-5"><a href="#cb23-5" aria-hidden="true" tabindex="-1"></a>  labels <span class="ot">&lt;-</span> batch[[<span class="dv">2</span>]]</span>
+<span id="cb23-6"><a href="#cb23-6" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb23-7"><a href="#cb23-7" aria-hidden="true" tabindex="-1"></a>  <span class="cf">if</span>( <span class="fu">dim</span>(images)[<span class="dv">1</span>] <span class="sc">&gt;</span> <span class="dv">5</span>) {</span>
+<span id="cb23-8"><a href="#cb23-8" aria-hidden="true" tabindex="-1"></a>   predict_batch_size <span class="ot">&lt;-</span>  <span class="dv">10</span></span>
+<span id="cb23-9"><a href="#cb23-9" aria-hidden="true" tabindex="-1"></a>  } <span class="cf">else</span> {</span>
+<span id="cb23-10"><a href="#cb23-10" aria-hidden="true" tabindex="-1"></a>    predict_batch_size <span class="ot">&lt;-</span> <span class="fu">dim</span>(images)[<span class="dv">1</span>]</span>
+<span id="cb23-11"><a href="#cb23-11" aria-hidden="true" tabindex="-1"></a>  }</span>
+<span id="cb23-12"><a href="#cb23-12" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb23-13"><a href="#cb23-13" aria-hidden="true" tabindex="-1"></a>  predictions<span class="ot">&lt;-</span>modelCNN <span class="sc">%&gt;%</span> <span class="fu">predict</span>(images)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>1/1 - 0s - 203ms/epoch - 203ms/step</code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb25"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb25-1"><a href="#cb25-1" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> (n <span class="cf">in</span> <span class="dv">1</span><span class="sc">:</span>predict_batch_size) {</span>
+<span id="cb25-2"><a href="#cb25-2" aria-hidden="true" tabindex="-1"></a>  image <span class="ot">&lt;-</span> images[n,, , ]</span>
+<span id="cb25-3"><a href="#cb25-3" aria-hidden="true" tabindex="-1"></a>  label <span class="ot">&lt;-</span> labels[n]</span>
+<span id="cb25-4"><a href="#cb25-4" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb25-5"><a href="#cb25-5" aria-hidden="true" tabindex="-1"></a>  <span class="co"># Display the image and label</span></span>
+<span id="cb25-6"><a href="#cb25-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">dim</span>(image)</span>
+<span id="cb25-7"><a href="#cb25-7" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb25-8"><a href="#cb25-8" aria-hidden="true" tabindex="-1"></a>  <span class="cf">if</span> (label<span class="sc">==</span><span class="dv">1</span>) {label<span class="ot">=</span><span class="st">"Dog"</span>} <span class="cf">else</span> {label<span class="ot">=</span><span class="st">"Cat"</span>}</span>
+<span id="cb25-9"><a href="#cb25-9" aria-hidden="true" tabindex="-1"></a>  <span class="cf">if</span> (predictions[n] <span class="sc">&gt;</span> <span class="fl">0.5</span> ) {guess<span class="ot">=</span><span class="st">"Dog"</span>} <span class="cf">else</span> {guess<span class="ot">=</span><span class="st">"Cat"</span>}</span>
+<span id="cb25-10"><a href="#cb25-10" aria-hidden="true" tabindex="-1"></a>  bImage<span class="ot">&lt;-</span><span class="fu">brick</span>(image)</span>
+<span id="cb25-11"><a href="#cb25-11" aria-hidden="true" tabindex="-1"></a>  <span class="fu">crs</span>(bImage)<span class="ot">&lt;-</span><span class="st">"+proj=longlat"</span></span>
+<span id="cb25-12"><a href="#cb25-12" aria-hidden="true" tabindex="-1"></a>  <span class="fu">plotRGB</span>(bImage, <span class="at">colNA=</span><span class="dv">0</span>, <span class="at">scale=</span><span class="dv">1</span>, <span class="at">axes=</span><span class="cn">TRUE</span>, <span class="at">main=</span><span class="fu">paste0</span>(<span class="st">"Label: "</span>, label, <span class="st">",</span><span class="sc">\n</span><span class="st"> P="</span>, <span class="fu">round</span>(predictions[n],<span class="dv">2</span>), <span class="st">", Prediction: "</span>,guess))</span>
+<span id="cb25-13"><a href="#cb25-13" aria-hidden="true" tabindex="-1"></a>  <span class="fu">Sys.sleep</span>(<span class="dv">1</span>) </span>
+<span id="cb25-14"><a href="#cb25-14" aria-hidden="true" tabindex="-1"></a>}</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output-display">
+<p><img src="CatOrDog_files/figure-html/unnamed-chunk-9-1.png" class="img-fluid" width="672"></p>
+</div>
+<div class="cell-output-display">
+<p><img src="CatOrDog_files/figure-html/unnamed-chunk-9-2.png" class="img-fluid" width="672"></p>
+</div>
+<div class="cell-output-display">
+<p><img src="CatOrDog_files/figure-html/unnamed-chunk-9-3.png" class="img-fluid" width="672"></p>
+</div>
+<div class="cell-output-display">
+<p><img src="CatOrDog_files/figure-html/unnamed-chunk-9-4.png" class="img-fluid" width="672"></p>
+</div>
+<div class="cell-output-display">
+<p><img src="CatOrDog_files/figure-html/unnamed-chunk-9-5.png" class="img-fluid" width="672"></p>
+</div>
+<div class="cell-output-display">
+<p><img src="CatOrDog_files/figure-html/unnamed-chunk-9-6.png" class="img-fluid" width="672"></p>
+</div>
+<div class="cell-output-display">
+<p><img src="CatOrDog_files/figure-html/unnamed-chunk-9-7.png" class="img-fluid" width="672"></p>
+</div>
+<div class="cell-output-display">
+<p><img src="CatOrDog_files/figure-html/unnamed-chunk-9-8.png" class="img-fluid" width="672"></p>
+</div>
+<div class="cell-output-display">
+<p><img src="CatOrDog_files/figure-html/unnamed-chunk-9-9.png" class="img-fluid" width="672"></p>
+</div>
+<div class="cell-output-display">
+<p><img src="CatOrDog_files/figure-html/unnamed-chunk-9-10.png" class="img-fluid" width="672"></p>
+</div>
+</div>
+</section>
+<section id="what-next" class="level2">
+<h2 class="anchored" data-anchor-id="what-next">What next?</h2>
+<p>There are several options on taking this forward.</p>
+<p>You could try to make the classifier more accurate, while trying reduce the problems with over-fitting. One option would be to included data augmentation (see example below), another would be to find more images to learn on. These images are from Kaggle - <code>https://www.kaggle.com/datasets?search=dog+cat</code>. We could also alter the hyper-parameters and model design.<br>
+<br>
+You could also try to set up a script that runs on biological data, e.g.&nbsp;https://doi.org/10.4103/2153-3539.186902. Note: the referenced website is not longer online but is archived at archive.org along with the data sets (https://web.archive.org/web/20200120024122/http://www.andrewjanowczyk.com/use-case-6-invasive-ductal-carcinoma-idc-segmentation/).</p>
+<section id="extension-data-augmentation" class="level3">
+<h3 class="anchored" data-anchor-id="extension-data-augmentation">Extension: Data Augmentation</h3>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb26"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb26-1"><a href="#cb26-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Data Augmentation: Enhance the training dataset with variations at datagen</span></span>
+<span id="cb26-2"><a href="#cb26-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb26-3"><a href="#cb26-3" aria-hidden="true" tabindex="-1"></a>datagen_variations <span class="ot">&lt;-</span> <span class="fu">image_data_generator</span>(</span>
+<span id="cb26-4"><a href="#cb26-4" aria-hidden="true" tabindex="-1"></a>  <span class="at">rescale =</span> <span class="dv">1</span><span class="sc">/</span><span class="dv">255</span>,            <span class="co"># Rescale pixel values to the range [0, 1]</span></span>
+<span id="cb26-5"><a href="#cb26-5" aria-hidden="true" tabindex="-1"></a>  <span class="at">rotation_range =</span> <span class="dv">40</span>, <span class="co"># Rotate images by up to 40</span></span>
+<span id="cb26-6"><a href="#cb26-6" aria-hidden="true" tabindex="-1"></a>  <span class="at">width_shift_range =</span> <span class="fl">0.2</span>, <span class="co"># Shift width by up to 20%</span></span>
+<span id="cb26-7"><a href="#cb26-7" aria-hidden="true" tabindex="-1"></a>  <span class="at">height_shift_range =</span> <span class="fl">0.2</span>, <span class="co"># Shift height by up to 20%</span></span>
+<span id="cb26-8"><a href="#cb26-8" aria-hidden="true" tabindex="-1"></a>  <span class="at">shear_range =</span> <span class="fl">0.2</span>, <span class="co"># Apply shear transformations</span></span>
+<span id="cb26-9"><a href="#cb26-9" aria-hidden="true" tabindex="-1"></a>  <span class="at">zoom_range =</span> <span class="fl">0.2</span>, <span class="co"># Zoom in or out by up to 20%</span></span>
+<span id="cb26-10"><a href="#cb26-10" aria-hidden="true" tabindex="-1"></a>  <span class="at">fill_mode =</span> <span class="st">"nearest"</span>, <span class="co"># Fill missing pixels using the nearest neighbour</span></span>
+<span id="cb26-11"><a href="#cb26-11" aria-hidden="true" tabindex="-1"></a>  <span class="at">horizontal_flip =</span> <span class="cn">TRUE</span> <span class="co"># Flip images horizontally</span></span>
+<span id="cb26-12"><a href="#cb26-12" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb26-13"><a href="#cb26-13" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb26-14"><a href="#cb26-14" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb26-15"><a href="#cb26-15" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb26-16"><a href="#cb26-16" aria-hidden="true" tabindex="-1"></a><span class="co"># Create data generators for training data</span></span>
+<span id="cb26-17"><a href="#cb26-17" aria-hidden="true" tabindex="-1"></a>train_datagen_variations <span class="ot">&lt;-</span> <span class="fu">flow_images_from_directory</span>(</span>
+<span id="cb26-18"><a href="#cb26-18" aria-hidden="true" tabindex="-1"></a>  train_dir,</span>
+<span id="cb26-19"><a href="#cb26-19" aria-hidden="true" tabindex="-1"></a>  <span class="at">generator =</span> datagen_variations,</span>
+<span id="cb26-20"><a href="#cb26-20" aria-hidden="true" tabindex="-1"></a>  <span class="at">target_size =</span> <span class="fu">c</span>(<span class="dv">150</span>, <span class="dv">150</span>),</span>
+<span id="cb26-21"><a href="#cb26-21" aria-hidden="true" tabindex="-1"></a>  <span class="at">batch_size =</span> batch_size,</span>
+<span id="cb26-22"><a href="#cb26-22" aria-hidden="true" tabindex="-1"></a>  <span class="at">class_mode =</span> <span class="st">"binary"</span>  </span>
+<span id="cb26-23"><a href="#cb26-23" aria-hidden="true" tabindex="-1"></a>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Found 2000 images belonging to 2 classes.</code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb28"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb28-1"><a href="#cb28-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Create data generators for validation data</span></span>
+<span id="cb28-2"><a href="#cb28-2" aria-hidden="true" tabindex="-1"></a>validation_datagen_variations <span class="ot">&lt;-</span> <span class="fu">flow_images_from_directory</span>(</span>
+<span id="cb28-3"><a href="#cb28-3" aria-hidden="true" tabindex="-1"></a>  validation_dir,</span>
+<span id="cb28-4"><a href="#cb28-4" aria-hidden="true" tabindex="-1"></a>  <span class="at">generator =</span> datagen_variations,</span>
+<span id="cb28-5"><a href="#cb28-5" aria-hidden="true" tabindex="-1"></a>  <span class="at">target_size =</span> <span class="fu">c</span>(<span class="dv">150</span>, <span class="dv">150</span>),</span>
+<span id="cb28-6"><a href="#cb28-6" aria-hidden="true" tabindex="-1"></a>  <span class="at">batch_size =</span> batch_size,</span>
+<span id="cb28-7"><a href="#cb28-7" aria-hidden="true" tabindex="-1"></a>  <span class="at">class_mode =</span> <span class="st">"binary"</span> </span>
+<span id="cb28-8"><a href="#cb28-8" aria-hidden="true" tabindex="-1"></a>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Found 1000 images belonging to 2 classes.</code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb30"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb30-1"><a href="#cb30-1" aria-hidden="true" tabindex="-1"></a>historyCNN_variations <span class="ot">&lt;-</span> modelCNN <span class="sc">%&gt;%</span> <span class="fu">fit</span>(</span>
+<span id="cb30-2"><a href="#cb30-2" aria-hidden="true" tabindex="-1"></a>  train_datagen,</span>
+<span id="cb30-3"><a href="#cb30-3" aria-hidden="true" tabindex="-1"></a>  <span class="at">steps_per_epoch =</span> n_train_samples <span class="sc">/</span> batch_size,</span>
+<span id="cb30-4"><a href="#cb30-4" aria-hidden="true" tabindex="-1"></a>  <span class="at">epochs =</span> <span class="dv">20</span>,</span>
+<span id="cb30-5"><a href="#cb30-5" aria-hidden="true" tabindex="-1"></a>  <span class="at">validation_data =</span> validation_datagen,</span>
+<span id="cb30-6"><a href="#cb30-6" aria-hidden="true" tabindex="-1"></a>  <span class="at">validation_steps =</span> n_validation_samples <span class="sc">/</span> batch_size,</span>
+<span id="cb30-7"><a href="#cb30-7" aria-hidden="true" tabindex="-1"></a>  <span class="at">callbacks =</span> <span class="fu">list</span>(reduce_lr, early_stop)</span>
+<span id="cb30-8"><a href="#cb30-8" aria-hidden="true" tabindex="-1"></a>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Epoch 1/20
+62/62 - 35s - loss: 0.4520 - accuracy: 0.7815 - val_loss: 0.5371 - val_accuracy: 0.7440 - lr: 4.0000e-05 - 35s/epoch - 571ms/step
+Epoch 2/20
+62/62 - 35s - loss: 0.4380 - accuracy: 0.7937 - val_loss: 0.5346 - val_accuracy: 0.7440 - lr: 4.0000e-05 - 35s/epoch - 569ms/step
+Epoch 3/20
+62/62 - 35s - loss: 0.4258 - accuracy: 0.8034 - val_loss: 0.5324 - val_accuracy: 0.7480 - lr: 4.0000e-05 - 35s/epoch - 569ms/step
+Epoch 4/20
+62/62 - 35s - loss: 0.4219 - accuracy: 0.8095 - val_loss: 0.5280 - val_accuracy: 0.7530 - lr: 4.0000e-05 - 35s/epoch - 572ms/step
+Epoch 5/20
+62/62 - 36s - loss: 0.4126 - accuracy: 0.8135 - val_loss: 0.5267 - val_accuracy: 0.7550 - lr: 4.0000e-05 - 36s/epoch - 587ms/step
+Epoch 6/20
+62/62 - 35s - loss: 0.3997 - accuracy: 0.8186 - val_loss: 0.5260 - val_accuracy: 0.7490 - lr: 4.0000e-05 - 35s/epoch - 562ms/step
+Epoch 7/20
+62/62 - 35s - loss: 0.4021 - accuracy: 0.8201 - val_loss: 0.5266 - val_accuracy: 0.7540 - lr: 4.0000e-05 - 35s/epoch - 561ms/step
+Epoch 8/20
+62/62 - 35s - loss: 0.3902 - accuracy: 0.8216 - val_loss: 0.5239 - val_accuracy: 0.7520 - lr: 4.0000e-05 - 35s/epoch - 565ms/step
+Epoch 9/20
+62/62 - 35s - loss: 0.3829 - accuracy: 0.8283 - val_loss: 0.5258 - val_accuracy: 0.7530 - lr: 4.0000e-05 - 35s/epoch - 560ms/step
+Epoch 10/20
+62/62 - 35s - loss: 0.3713 - accuracy: 0.8303 - val_loss: 0.5265 - val_accuracy: 0.7530 - lr: 4.0000e-05 - 35s/epoch - 563ms/step
+Epoch 11/20
+62/62 - 35s - loss: 0.3763 - accuracy: 0.8343 - val_loss: 0.5210 - val_accuracy: 0.7540 - lr: 4.0000e-05 - 35s/epoch - 561ms/step
+Epoch 12/20
+62/62 - 35s - loss: 0.3676 - accuracy: 0.8384 - val_loss: 0.5227 - val_accuracy: 0.7540 - lr: 4.0000e-05 - 35s/epoch - 559ms/step
+Epoch 13/20
+62/62 - 35s - loss: 0.3641 - accuracy: 0.8394 - val_loss: 0.5237 - val_accuracy: 0.7500 - lr: 4.0000e-05 - 35s/epoch - 566ms/step
+Epoch 14/20
+62/62 - 35s - loss: 0.3598 - accuracy: 0.8445 - val_loss: 0.5209 - val_accuracy: 0.7540 - lr: 4.0000e-05 - 35s/epoch - 564ms/step
+Epoch 15/20
+62/62 - 35s - loss: 0.3509 - accuracy: 0.8501 - val_loss: 0.5251 - val_accuracy: 0.7540 - lr: 4.0000e-05 - 35s/epoch - 561ms/step
+Epoch 16/20
+62/62 - 35s - loss: 0.3493 - accuracy: 0.8465 - val_loss: 0.5208 - val_accuracy: 0.7540 - lr: 4.0000e-05 - 35s/epoch - 563ms/step
+Epoch 17/20
+62/62 - 37s - loss: 0.3406 - accuracy: 0.8557 - val_loss: 0.5168 - val_accuracy: 0.7611 - lr: 4.0000e-05 - 37s/epoch - 599ms/step
+Epoch 18/20
+62/62 - 35s - loss: 0.3347 - accuracy: 0.8623 - val_loss: 0.5211 - val_accuracy: 0.7550 - lr: 4.0000e-05 - 35s/epoch - 563ms/step
+Epoch 19/20
+62/62 - 35s - loss: 0.3280 - accuracy: 0.8547 - val_loss: 0.5286 - val_accuracy: 0.7530 - lr: 4.0000e-05 - 35s/epoch - 562ms/step
+Epoch 20/20
+62/62 - 35s - loss: 0.3251 - accuracy: 0.8587 - val_loss: 0.5257 - val_accuracy: 0.7571 - lr: 4.0000e-05 - 35s/epoch - 563ms/step</code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb32"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb32-1"><a href="#cb32-1" aria-hidden="true" tabindex="-1"></a><span class="fu">plot</span>(historyCNN_variations)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output-display">
+<p><img src="CatOrDog_files/figure-html/unnamed-chunk-10-1.png" class="img-fluid" width="672"></p>
+</div>
+</div>
+</section>
+</section>
+</section>
+
+</main>
+<!-- /main column -->
+<script id="quarto-html-after-body" type="application/javascript">
+window.document.addEventListener("DOMContentLoaded", function (event) {
+  const toggleBodyColorMode = (bsSheetEl) => {
+    const mode = bsSheetEl.getAttribute("data-mode");
+    const bodyEl = window.document.querySelector("body");
+    if (mode === "dark") {
+      bodyEl.classList.add("quarto-dark");
+      bodyEl.classList.remove("quarto-light");
+    } else {
+      bodyEl.classList.add("quarto-light");
+      bodyEl.classList.remove("quarto-dark");
+    }
+  }
+  const toggleBodyColorPrimary = () => {
+    const bsSheetEl = window.document.querySelector("link#quarto-bootstrap");
+    if (bsSheetEl) {
+      toggleBodyColorMode(bsSheetEl);
+    }
+  }
+  toggleBodyColorPrimary();  
+  const icon = "";
+  const anchorJS = new window.AnchorJS();
+  anchorJS.options = {
+    placement: 'right',
+    icon: icon
+  };
+  anchorJS.add('.anchored');
+  const clipboard = new window.ClipboardJS('.code-copy-button', {
+    target: function(trigger) {
+      return trigger.previousElementSibling;
+    }
+  });
+  clipboard.on('success', function(e) {
+    // button target
+    const button = e.trigger;
+    // don't keep focus
+    button.blur();
+    // flash "checked"
+    button.classList.add('code-copy-button-checked');
+    var currentTitle = button.getAttribute("title");
+    button.setAttribute("title", "Copied!");
+    let tooltip;
+    if (window.bootstrap) {
+      button.setAttribute("data-bs-toggle", "tooltip");
+      button.setAttribute("data-bs-placement", "left");
+      button.setAttribute("data-bs-title", "Copied!");
+      tooltip = new bootstrap.Tooltip(button, 
+        { trigger: "manual", 
+          customClass: "code-copy-button-tooltip",
+          offset: [0, -8]});
+      tooltip.show();    
+    }
+    setTimeout(function() {
+      if (tooltip) {
+        tooltip.hide();
+        button.removeAttribute("data-bs-title");
+        button.removeAttribute("data-bs-toggle");
+        button.removeAttribute("data-bs-placement");
+      }
+      button.setAttribute("title", currentTitle);
+      button.classList.remove('code-copy-button-checked');
+    }, 1000);
+    // clear code selection
+    e.clearSelection();
+  });
+  function tippyHover(el, contentFn) {
+    const config = {
+      allowHTML: true,
+      content: contentFn,
+      maxWidth: 500,
+      delay: 100,
+      arrow: false,
+      appendTo: function(el) {
+          return el.parentElement;
+      },
+      interactive: true,
+      interactiveBorder: 10,
+      theme: 'quarto',
+      placement: 'bottom-start'
+    };
+    window.tippy(el, config); 
+  }
+  const noterefs = window.document.querySelectorAll('a[role="doc-noteref"]');
+  for (var i=0; i<noterefs.length; i++) {
+    const ref = noterefs[i];
+    tippyHover(ref, function() {
+      // use id or data attribute instead here
+      let href = ref.getAttribute('data-footnote-href') || ref.getAttribute('href');
+      try { href = new URL(href).hash; } catch {}
+      const id = href.replace(/^#\/?/, "");
+      const note = window.document.getElementById(id);
+      return note.innerHTML;
+    });
+  }
+  const findCites = (el) => {
+    const parentEl = el.parentElement;
+    if (parentEl) {
+      const cites = parentEl.dataset.cites;
+      if (cites) {
+        return {
+          el,
+          cites: cites.split(' ')
+        };
+      } else {
+        return findCites(el.parentElement)
+      }
+    } else {
+      return undefined;
+    }
+  };
+  var bibliorefs = window.document.querySelectorAll('a[role="doc-biblioref"]');
+  for (var i=0; i<bibliorefs.length; i++) {
+    const ref = bibliorefs[i];
+    const citeInfo = findCites(ref);
+    if (citeInfo) {
+      tippyHover(citeInfo.el, function() {
+        var popup = window.document.createElement('div');
+        citeInfo.cites.forEach(function(cite) {
+          var citeDiv = window.document.createElement('div');
+          citeDiv.classList.add('hanging-indent');
+          citeDiv.classList.add('csl-entry');
+          var biblioDiv = window.document.getElementById('ref-' + cite);
+          if (biblioDiv) {
+            citeDiv.innerHTML = biblioDiv.innerHTML;
+          }
+          popup.appendChild(citeDiv);
+        });
+        return popup.innerHTML;
+      });
+    }
+  }
+});
+</script>
+</div> <!-- /content -->
+
+
+
+</body></html>

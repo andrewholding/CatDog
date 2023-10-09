@@ -1,0 +1,380 @@
+---
+title: "Writing your own AI image classifier in R"
+author: "Andrew Holding"
+format: html
+editor: visual
+---
+
+## Introduction
+
+The aim of this tutorial is to provide you with the tools to generate an AI that can classify a set of images into one of two different categories. The code below will learn to classify an image as either 'cat' or 'dog', using a public set of 2000 images to train and another 1000 to validate. For the first part of the tutorial, we will apply a form of machine learning called logistic regression. For the second part we will introduce how to use a convolutional neural network (CNN) in place of the the logistic regression for more accuracy.
+
+**An important technicality**: logistic regression can be thought of as the simplest form of AI, as logistic regression is very similar to AI but with a single layer. This similarity makes logistic regression a good starting point for introducing the concepts needed for AI methods, and when we get to the point of introducing more layers into the algorithm hopefully these concepts of what a layer is will be more clear. However, since a feature of an AI is the use of multiple layers, we should use the more general term of machine learning to formally describe logistic regression.
+
+## Configuring a machine learning environment in R
+
+As much of the teaching up to this point is in R, we wrote this tutorial with R users in mind; however, much of the AI work is easiest using tools written in Python, e.g. TensorFlow. To work around this challenge, we use the following packages, in particular a package called 'reticulate', that enables the use of Python packages in R. The block of code below will install the R packages we need for this tutorial, if not installed, and then load them.
+
+```{r}
+
+# List of packages to check and install if missing
+packages_to_install <- c("keras", "tensorflow", "raster", "reticulate")
+
+# Check if each package is installed, and install it if missing
+for (package in packages_to_install) {
+  if (!requireNamespace(package, quietly = TRUE)) {
+    install.packages(package)
+  }
+  library(package, character.only = TRUE)
+}
+
+```
+
+Once the packages are installed you may need to install the following Python on your computer too. It's best to run these manually and then restart R. Once installed you don't need to rerun this code.
+
+```{r}
+# Download and install necessary Python packages (if needed)
+# within python used by R
+#
+# install_tensorflow() 
+# py_install("pillow")
+# py_install("scipy")
+# py_install("keras")
+
+```
+
+## Downloading the training and validation data
+
+We need to download the images to train and validate our logistic regression model. The download contains two sets of images, the first is the training set, and the second is the validation set. We must not use the validation images for training, as if our model has already seen the images in training, during our validation we can run into a problem called over-fitting. Over-fitting is where our model has learnt to recognize the images too specifically, and when we try to classify new images the classifier does poorly because the model has learnt not to look for the general features but the exact images themselves. We'll discuss this again at the training step.\
+\
+The code block below will download the images to you desktop.
+
+```{r}
+
+# Download the dataset
+url <- "https://storage.googleapis.com/mledu-datasets/cats_and_dogs_filtered.zip"
+zip_file <- "cats_and_dogs_filtered.zip"
+download.file(url, zip_file)
+unzip(zip_file, exdir = "cats_and_dogs_dataset")
+
+# Define the directories for training and validation data
+train_dir <- "cats_and_dogs_dataset/cats_and_dogs_filtered/train"
+validation_dir <- "cats_and_dogs_dataset/cats_and_dogs_filtered/validation"
+
+
+```
+
+## Configuring training and validation data sets
+
+Next, we load the training and validation sets. In this case, the training and validation data sets have a folder of 'cats' and 'dogs'. If you look into these folders, you will find a series of dog or cat images that match the folder name.
+
+The first set of this code block is to set up the 'image_data_generator'. This function can do more than we use it for here, for now; however, we're just using it to rescale the image pixels from 0-255 to 0-1.
+
+Traditionally a pixel is defined by three values for red, green and blue (R, G, B) measured as a whole number (integer) between 0 and 255. Bright red is (255,0,0), and dark purple would be (128,0,128). For our code, we want each pixel's data in the format of 0 to 1 as a decimal as red=(1,0,0) or dark purple=(0.5,0,0.5). Using decimals between 0 and 1 is convenient in machine learning as 1 times 1 is never greater than 1, while 0 times 0 is never less than 0. 255 times 255; however, is much larger than 255.
+
+(The reason colours are usually stored as 0-255 is due to them being stored as 8-bit binary channels, (i.e. the largest number you can write with 8-bits is 11111111 = 255); however, you don't need to understand that for this tutorial.)\
+\
+The next parameter is the batch size, this is our first hyperparameter, i.e. a parameter that defines how the machine learning learns. The smaller the batch size the slower the machine learning will run; however, the larger the batch size the more computationally intensive the process is. We use 32 here to keep things workable on a laptop. The reason GPUs, originally sold for computer games, are so popular for machine learning is they are able to process very large batch sizes.
+
+We then apply the 'flow_images_from_directory' command to define our two datasets. You'll notice we specify the datagen, and we also provide a target size. The target size is important. We want our data all to be the same size, otherwise, if all the dog images are slightly larger the model may just start learning the size of the image instead of the contents of it. This process is all part of regularization, making the images as similar as possible except for the features we wish to learn. We also specify that the class mode is 'binary', i.e. we have two categories, 'Dog' or 'Cat'.
+
+```{r}
+
+# Data Augmentation
+datagen <- image_data_generator(
+  rescale = 1/255,            # Rescale pixel values to the range [0, 1]
+)
+
+
+# Define the batch size
+batch_size <- 32
+
+# Create data generators for training data
+train_datagen <- flow_images_from_directory(
+  train_dir,
+  generator = datagen,
+  target_size = c(150, 150),
+  batch_size = batch_size,
+  class_mode = "binary"  
+)
+
+# Create data generators for validation data
+validation_datagen <- flow_images_from_directory(
+  validation_dir,
+  generator = datagen,
+  target_size = c(150, 150),
+  batch_size = batch_size,
+  class_mode = "binary" 
+)
+
+# Calculate the number of training samples
+n_train_samples <- length(train_datagen$filenames)
+
+# Calculate the number of validation samples
+n_validation_samples <- length(validation_datagen$filenames)
+
+```
+
+## Defining the model
+
+For this example, we are defining a logistic regression model. These models take all the pixels from our image, defined as 150 x 150 pixels x 3 colours as defined in the last code block into the first layer and combine them into a single 'sigmoid' output. Sigmoid functions are very useful for binary classifiers as they take any number from -infinity to +infinity and convert it to a value of 0 to 1, i.e. a probability.
+
+The learning will then weigh how all the pixels contribute to the final value which is converted to the sigmoid function to a probability.
+
+Here we also define a a few hyperparameters. The learning rate is the speed at which the model updates the weighting of each pixel in the mode. A fast learning rate is not always good as it can lead the model to overshoot and never find the best weightings. Early stopping also enables the model to roll back to a better model if an overshoot happens.
+
+Finally, we compile the model. There are a few things here to improve our model from the start. The optimizer 'optimizer_rmsprop' is slightly smarter than the traditional stochastic gradient descent (SGD) 'optimizer_sgd' because RMSprop automates learning-rate tuning for us.
+
+The optimizer is the core part of what we're about to do. Each time we run a batch of images through the model we will generate a loss which is a measure of how accurate the model is. The SGD would then look at how changing the weighting to each alters the loss (if you've done A-Level math, this can be done via differentiation), and steps an amount by the learning rate towards parameters that give lower loss. The process is repeated time and time again with different images to fine-tune the weightings. This process of adjusting the weights on the basis of the loss function is called backpropagation.
+
+\
+![](images/image-1828620369.png){width="495"}
+
+**Figure 1. Example logistic regression model.**\
+
+```{r}
+
+
+# Define a logistic regression model - a simple first example
+model <- keras_model_sequential() %>%
+ layer_flatten(input_shape = c(150, 150, 3)) %>%  # Flatten the input image
+ layer_dense(units = 1, activation = "sigmoid") 
+   # Single dense layer with sigmoid activation
+
+# Learning Rate Schedule with ReduceLRonPlateau
+reduce_lr <- callback_reduce_lr_on_plateau(
+  monitor = "val_loss",
+  factor = 0.2,
+  patience = 5
+)
+
+# Early Stopping
+early_stop <- callback_early_stopping(
+  monitor = "val_loss",
+  patience = 10,
+  restore_best_weights = TRUE
+)
+
+# Compile the model
+model %>% compile(
+  loss = "binary_crossentropy",                      # Binary cross-entropy loss
+  optimizer = optimizer_rmsprop(learning_rate = 1e-3),   # RMSprop optimizer 
+  metrics = c("accuracy")                           # Monitor accuracy during training
+)
+
+
+
+
+```
+
+## Training the model
+
+With the model configured we can now train the model. As we do this R provides a plot of the loss function ouput (lower is better), the accuracy on the training set and accuracy on the validation set. And finally a plot of the learning rate, which is lowered as the scripts runs. The key new term here is 'epoch', an epoch is each time the training will run through the entire dataset.
+
+An important point to note is if the training set accuracy continues to increase but the validation set's accuracy does not increase it looks like we are at risk of over-fitting, you can see this in the plots for our the data at around the 6th epoch. This problem is something we must avoid. By about epoch 11, the problem is very apparent. Despite the prediction accuracy on the training set continuing to improve the prediction of the validation data set is now getting worse.
+
+```{r}
+
+# Train the logistic regression model with callbacks
+history <- model %>% fit(
+  train_datagen,
+  steps_per_epoch = n_train_samples / batch_size,
+  epochs = 20,
+  validation_data = validation_datagen,
+  validation_steps = n_validation_samples / batch_size,
+  callbacks = list(reduce_lr, early_stop)
+)
+
+# Plot the loss with each epoch
+plot(history)
+
+```
+
+## Testing the model
+
+Technically there is no need for the next block of code as the validation set was test as part of the plot above. Nonetheless, I always recommend testing your data manually to visually determine if the results make sense. Here we run the model on the validation set and label a set of images for us to review. The model is only just above \~55% accurate (which isn't very good) but it gets the answer right more often than chance which is something.
+
+```{r}
+
+# Test the model 
+
+  batch <- generator_next(validation_datagen)
+  images <- batch[[1]]
+  labels <- batch[[2]]
+  
+  if( dim(images)[1] > 5) {
+   predict_batch_size <-  5
+  } else {
+    predict_batch_size <- dim(images)[1]
+  }
+  
+  predictions<-model %>% predict(images)
+  
+for (n in 1:predict_batch_size) {
+  image <- images[n,, , ]
+  label <- labels[n]
+  
+  # Display the image and label
+  dim(image)
+  
+  if (label==1) {label="Dog"} else {label="Cat"}
+  if (predictions[n] > 0.5 ) {guess="Dog"} else {guess="Cat"}
+  bImage<-brick(image)
+  crs(bImage)<-"+proj=longlat"
+  plotRGB(bImage, colNA=0, scale=1, axes=TRUE, main=paste0("Label: ", label, ",\n P=", round(predictions[n],2), ", Prediction: ",guess))
+  Sys.sleep(1) 
+}
+```
+
+## Improving the model with CNN (AI)
+
+Logistic regression is very good at some classification questions; however, for our test data it is not performing well. We are therefore going to apply a CCN. There are many ways to design a CNN, and below is just one that works well for this challenge. The selection of hyper parameters, i.e. the number of layers, the size of each layer is complex. Here however we have use to convolution layers (these extract features of the image) and two pooling layers (these reduce the number of dimensions of the data). We then finish by flattening the data and using a sigmoid function at the end to obtain a value between 0-1. How a convolution layer works requires a bit of knowledge on matrix algebra that is well worth learning.\
+\
+The layers also need an activation function, this mimics the activation function of a neuron but for simplicity we use the 'relu' function over a more biologically accurate function. The function is very simple; if x \< 0 then the output f(x) = 0, if x \> 0 then f(x) = x. The neuron is only active if the input is positive, and then the strong the input the stronger the output.
+
+We have also included a dropout layer. The drop out layer randomly disables nodes in our neural net during the learning to help prevent over fitting.\
+\
+Once configured we run as before. Again we see some signs of over fitting, with the accuracy of the test data set reaching 100%. but validation set only reaches 70%.
+
+![**Figure 2. Simplified illustration of our CNN model.**](images/image-1388631215.png)
+
+```{r}
+
+#Define CNN
+# Convolutional layers
+modelCNN <- keras_model_sequential() %>%
+  layer_conv_2d(filters = 32, kernel_size = c(3, 3),
+                activation = "relu", input_shape = c(150, 150, 3)) %>%
+  layer_max_pooling_2d(pool_size = c(2, 2)) %>%
+  
+  layer_conv_2d(filters = 64, kernel_size = c(3, 3), activation = "relu") %>%
+  layer_max_pooling_2d(pool_size = c(2, 2)) %>%
+  
+  layer_conv_2d(filters = 128, kernel_size = c(3, 3), activation = "relu") %>%
+  layer_max_pooling_2d(pool_size = c(2, 2)) %>%
+  
+  # Flatten layer
+  layer_flatten() %>%
+  
+  # Fully connected layers
+  layer_dense(units = 512, activation = "relu") %>%
+  layer_dropout(0.5) %>%  # Dropout for regularization
+  
+  # Output layer
+  layer_dense(units = 1, activation = "sigmoid")
+
+
+# Compile the model
+modelCNN %>% compile(
+  loss = "binary_crossentropy",                      # Binary cross-entropy loss
+    optimizer = optimizer_rmsprop(learning_rate = 1e-3),   # RMSprop optimizer 
+  metrics = c("accuracy")                           # Monitor accuracy during training
+)
+
+
+# Train the logistic regression model with callbacks
+historyCNN <- modelCNN %>% fit(
+  train_datagen,
+  steps_per_epoch = n_train_samples / batch_size,
+  epochs = 20,
+  validation_data = validation_datagen,
+  validation_steps = n_validation_samples / batch_size,
+  callbacks = list(reduce_lr, early_stop)
+)
+
+
+plot(historyCNN)
+```
+
+## Testing the CNN
+
+We can use exactly the same code as before to test out model. The CNN in this version gets more like 70% accuracy, much improved over the logistic regression model we tried. The improvement results in many more of the images being correctly annotated in the validation set.
+
+```{r}
+# Test the new model 
+
+  batch <- generator_next(validation_datagen)
+  images <- batch[[1]]
+  labels <- batch[[2]]
+  
+  if( dim(images)[1] > 5) {
+   predict_batch_size <-  10
+  } else {
+    predict_batch_size <- dim(images)[1]
+  }
+  
+  predictions<-modelCNN %>% predict(images)
+  
+for (n in 1:predict_batch_size) {
+  image <- images[n,, , ]
+  label <- labels[n]
+  
+  # Display the image and label
+  dim(image)
+  
+  if (label==1) {label="Dog"} else {label="Cat"}
+  if (predictions[n] > 0.5 ) {guess="Dog"} else {guess="Cat"}
+  bImage<-brick(image)
+  crs(bImage)<-"+proj=longlat"
+  plotRGB(bImage, colNA=0, scale=1, axes=TRUE, main=paste0("Label: ", label, ",\n P=", round(predictions[n],2), ", Prediction: ",guess))
+  Sys.sleep(1) 
+}
+
+```
+
+## What next?
+
+There are several options on taking this forward.
+
+You could try to make the classifier more accurate, while trying reduce the problems with over-fitting. One option would be to included data augmentation (see example below), another would be to find more images to learn on. These images are from Kaggle - `https://www.kaggle.com/datasets?search=dog+cat`. We could also alter the hyper-parameters and model design. \
+\
+You could also try to set up a script that runs on biological data, e.g. https://doi.org/10.4103/2153-3539.186902. Note: the referenced website is not longer online but is archived at archive.org along with the data sets (https://web.archive.org/web/20200120024122/http://www.andrewjanowczyk.com/use-case-6-invasive-ductal-carcinoma-idc-segmentation/).
+
+### Extension: Data Augmentation
+
+```{r}
+# Data Augmentation: Enhance the training dataset with variations at datagen
+
+datagen_variations <- image_data_generator(
+  rescale = 1/255,            # Rescale pixel values to the range [0, 1]
+  rotation_range = 40, # Rotate images by up to 40
+  width_shift_range = 0.2, # Shift width by up to 20%
+  height_shift_range = 0.2, # Shift height by up to 20%
+  shear_range = 0.2, # Apply shear transformations
+  zoom_range = 0.2, # Zoom in or out by up to 20%
+  fill_mode = "nearest", # Fill missing pixels using the nearest neighbour
+  horizontal_flip = TRUE # Flip images horizontally
+)
+
+
+
+# Create data generators for training data
+train_datagen_variations <- flow_images_from_directory(
+  train_dir,
+  generator = datagen_variations,
+  target_size = c(150, 150),
+  batch_size = batch_size,
+  class_mode = "binary"  
+)
+
+# Create data generators for validation data
+validation_datagen_variations <- flow_images_from_directory(
+  validation_dir,
+  generator = datagen_variations,
+  target_size = c(150, 150),
+  batch_size = batch_size,
+  class_mode = "binary" 
+)
+
+historyCNN_variations <- modelCNN %>% fit(
+  train_datagen,
+  steps_per_epoch = n_train_samples / batch_size,
+  epochs = 20,
+  validation_data = validation_datagen,
+  validation_steps = n_validation_samples / batch_size,
+  callbacks = list(reduce_lr, early_stop)
+)
+
+
+plot(historyCNN_variations)
+```
