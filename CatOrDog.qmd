@@ -57,10 +57,6 @@ zip_file <- "cats_and_dogs_filtered.zip"
 download.file(url, zip_file)
 unzip(zip_file, exdir = "cats_and_dogs_dataset")
 
-# Define the directories for training and validation data
-train_dir <- "cats_and_dogs_dataset/cats_and_dogs_filtered/train"
-validation_dir <- "cats_and_dogs_dataset/cats_and_dogs_filtered/validation"
-
 
 ```
 
@@ -79,6 +75,10 @@ The next parameter is the batch size, this is our first hyperparameter, i.e. a p
 We then apply the 'flow_images_from_directory' command to define our two datasets. You'll notice we specify the datagen, and we also provide a target size. The target size is important. We want our data all to be the same size, otherwise, if all the dog images are slightly larger the model may just start learning the size of the image instead of the contents of it. This process is all part of regularization, making the images as similar as possible except for the features we wish to learn. We also specify that the class mode is 'binary', i.e. we have two categories, 'Dog' or 'Cat'.
 
 ```{r}
+
+# Define the directories for training and validation data
+train_dir <- "cats_and_dogs_dataset/cats_and_dogs_filtered/train"
+validation_dir <- "cats_and_dogs_dataset/cats_and_dogs_filtered/validation"
 
 # Data Augmentation
 datagen <- image_data_generator(
@@ -272,7 +272,7 @@ modelCNN %>% compile(
 )
 
 
-# Train the logistic regression model with callbacks
+# Train the CNN model with callbacks
 historyCNN <- modelCNN %>% fit(
   train_datagen,
   steps_per_epoch = n_train_samples / batch_size,
@@ -326,9 +326,11 @@ for (n in 1:predict_batch_size) {
 
 There are several options on taking this forward.
 
-You could try to make the classifier more accurate, while trying reduce the problems with over-fitting. One option would be to included data augmentation (see example below), another would be to find more images to learn on. These images are from Kaggle - `https://www.kaggle.com/datasets?search=dog+cat`. We could also alter the hyper-parameters and model design. \
+You could try to make the classifier more accurate, while trying reduce the problems with over-fitting. One option would be to included data augmentation (see example below), another would be to find more images to learn on. We could also alter the hyper-parameters and model design.\
 \
-You could also try to set up a script that runs on biological data, e.g. https://doi.org/10.4103/2153-3539.186902. Note: the referenced website is not longer online but is archived at archive.org along with the data sets (https://web.archive.org/web/20200120024122/http://www.andrewjanowczyk.com/use-case-6-invasive-ductal-carcinoma-idc-segmentation/).
+Your final goal should be to try to set up a script that runs on biological data, a good source for data is https://www.kaggle.com/datasets/ambarish/breakhis or the simplified https://www.kaggle.com/datasets/forderation/breakhis-400x, but feel free to find your own.\
+\
+https://www.kaggle.com/code/azazurrehmanbutt/breakhis-images-classification-cnn
 
 ### Extension: Data Augmentation
 
@@ -378,3 +380,210 @@ historyCNN_variations <- modelCNN %>% fit(
 
 plot(historyCNN_variations)
 ```
+
+##TESTING
+
+```{r}
+# List of packages to check and install if missing
+packages_to_install <- c("keras", "tensorflow", "raster", "reticulate")
+
+# Check if each package is installed, and install it if missing
+for (package in packages_to_install) {
+  if (!requireNamespace(package, quietly = TRUE)) {
+    install.packages(package)
+  }
+  library(package, character.only = TRUE)
+}
+```
+
+```{r}
+
+
+train_BreaKHis_dir<- "BreaKHis 400X/train"
+test_BreaKHis_dir<- "BreaKHis 400X/test"
+
+datagen_split<- image_data_generator(
+  rescale = 1/255,            # Rescale pixel values to the range [0, 1]
+)
+
+# Define the batch size
+batch_size <- 32
+
+# Create separate data generators for validation and training
+#Adjust the training data generator to exclude the validation subset
+
+train_datagen_BreaKHis <- flow_images_from_directory(
+  train_BreaKHis_dir,
+  generator = datagen_split,
+  target_size = c(224, 224),
+  batch_size = batch_size,
+  class_mode = "binary"
+)
+
+validation_datagen_BreaKHis <- flow_images_from_directory(
+  test_BreaKHis_dir,
+  generator = datagen_split,
+  target_size = c(224, 224),
+  batch_size = batch_size,
+  class_mode = "binary"
+)
+
+
+
+```
+
+```{r}
+
+#Define CNN, we are going to load a premade net start.
+efficientnetv2_b0 <- keras$applications$EfficientNetV2B0(
+  include_top = TRUE,  # Set this to FALSE if you want to customize the top layers
+  weights = "imagenet",  # Use pre-trained weights
+)
+
+# Convolutional layers
+modelCNN_BreaKHis <- keras_model_sequential() %>%
+  
+  # Fully connected layers
+  layer_dense(units = 1000, activation = "relu") %>%
+  layer_dropout(0.5) %>%  # Dropout for regularization
+  
+  #Normlise
+  layer_batch_normalization() %>% 
+  
+  # Output layer
+  layer_dense(units = 1, activation = "sigmoid")
+
+# Compile the model
+modelCNN_BreaKHis %>% compile(
+  loss = "binary_crossentropy",                      # Binary cross-entropy loss
+    optimizer = optimizer_rmsprop(learning_rate = 1e-3),   # RMSprop optimizer 
+  metrics = c("accuracy")                           # Monitor accuracy during training
+)
+
+# Learning Rate Schedule with ReduceLRonPlateau
+reduce_lr <- callback_reduce_lr_on_plateau(
+  monitor = "val_loss",
+  factor = 0.2,
+  patience = 5
+)
+
+# Early Stopping
+early_stop <- callback_early_stopping(
+  monitor = "val_loss",
+  patience = 10,
+  restore_best_weights = TRUE
+)
+
+
+combined_model <- keras_model_sequential() %>%
+  efficientnetv2_b0 %>%
+  modelCNN_BreaKHis 
+
+combined_model %>% compile(
+  loss = "binary_crossentropy",                      # Binary cross-entropy loss
+    optimizer = optimizer_rmsprop(learning_rate = 1e-3),   # RMSprop optimizer 
+  metrics = c("accuracy")                           # Monitor accuracy during training
+)
+
+#Not working - back to cats
+#train_datagen_BreaKHis<-train_datagen
+#validation_datagen_BreaKHis<-validation_datagen
+
+# Calculate the number of training samples
+n_train_samples_BreaKHis <- length(train_datagen_BreaKHis$filenames)
+
+# Calculate the number of validation samples
+n_validation_samples_BreaKHis <- length(validation_datagen_BreaKHis$filenames)
+
+
+
+# Train the CNN model with callbacks
+combined_model <- combined_model %>% fit(
+  train_datagen_BreaKHis,
+  steps_per_epoch = n_train_samples_BreaKHis / batch_size,
+  epochs = 10,
+  validation_data = validation_datagen_BreaKHis,
+  validation_steps = n_validation_samples_BreaKHis / batch_size,
+  callbacks = list(reduce_lr, early_stop)
+)
+
+
+plot(combined_model)
+```
+
+```{r}
+
+
+# Test the model 
+
+  batch <- generator_next(validation_datagen_BreaKHis)
+  images <- batch[[1]]
+  labels <- batch[[2]]
+  
+  if( dim(images)[1] > 5) {
+   predict_batch_size <-  5
+  } else {
+    predict_batch_size <- dim(images)[1]
+  }
+  
+  predictions<-modelCNN %>% predict(images)
+  
+for (n in 1:predict_batch_size) {
+  image <- images[n,, , ]
+  label <- labels[n]
+  
+  # Display the image and label
+  dim(image)
+  
+  if (label==1) {label="Benign"} else {label="Malignant"}
+  if (predictions[n] > 0.5 ) {guess="Benign"} else {guess="Malignant"}
+  bImage<-brick(image)
+  crs(bImage)<-"+proj=longlat"
+  plotRGB(bImage, colNA=0, scale=1, axes=TRUE, main=paste0("Label: ", label, ",\n P=", round(predictions[n],2), ", Prediction: ",guess))
+  Sys.sleep(1) 
+}
+```
+
+Will pretrained help cat/dog\
+
+```{r}
+
+# Define the directories for training and validation data
+train_dir <- "cats_and_dogs_dataset/cats_and_dogs_filtered/train"
+validation_dir <- "cats_and_dogs_dataset/cats_and_dogs_filtered/validation"
+
+# Data Augmentation
+datagen <- image_data_generator(
+  rescale = 1/255,            # Rescale pixel values to the range [0, 1]
+)
+
+
+# Define the batch size
+batch_size <- 32
+
+# Create data generators for training data
+train_datagen <- flow_images_from_directory(
+  train_dir,
+  generator = datagen,
+  target_size = c(224, 224),
+  batch_size = batch_size,
+  class_mode = "binary"  
+)
+
+# Create data generators for validation data
+validation_datagen <- flow_images_from_directory(
+  validation_dir,
+  generator = datagen,
+  target_size = c(224, 224),
+  batch_size = batch_size,
+  class_mode = "binary" 
+)
+
+# Calculate the number of training samples
+n_train_samples <- length(train_datagen$filenames)
+
+# Calculate the number of validation samples
+n_validation_samples <- length(validation_datagen$filenames)
+```
+
+\
