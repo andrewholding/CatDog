@@ -234,7 +234,7 @@ for (n in 1:predict_batch_size) {
 
 Logistic regression is very good at some classification questions; however, for our test data it is not performing well. We are therefore going to apply a CCN. There are many ways to design a CNN, and below is just one that works well for this challenge. The selection of hyper parameters, i.e. the number of layers, the size of each layer is complex. Here however we have use to convolution layers (these extract features of the image) and two pooling layers (these reduce the number of dimensions of the data). We then finish by flattening the data and using a sigmoid function at the end to obtain a value between 0-1. How a convolution layer works requires a bit of knowledge on matrix algebra that is well worth learning.\
 \
-The layers also need an activation function, this mimics the activation function of a neuron but for simplicity we use the 'relu' function over a more biologically accurate function. The function is very simple; if x \< 0 then the output f(x) = 0, if x \> 0 then f(x) = x. The neuron is only active if the input is positive, and then the strong the input the stronger the output.
+The layers also need an activation function, this mimics the activation function of a neuron but for simplicity we use the 'relu' function over a more biologically accurate function. The function is very simple; if x \< 0 then the output f(x) = 0, if x \> 0 then f(x) = x. The neuron is only active if the input is positive, and then the stronger the input the stronger the output.
 
 We have also included a dropout layer. The drop out layer randomly disables nodes in our neural net during the learning to help prevent over fitting.\
 \
