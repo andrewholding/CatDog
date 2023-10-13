@@ -5,6 +5,8 @@ format: html
 editor: visual
 ---
 
+# Building your first classifier
+
 ## Introduction
 
 The aim of this tutorial is to provide you with the tools to generate an AI that can classify a set of images into one of two different categories. The code below will learn to classify an image as either 'cat' or 'dog', using a public set of 2000 images to train and another 1000 to validate. For the first part of the tutorial, we will apply a form of machine learning called logistic regression. For the second part we will introduce how to use a convolutional neural network (CNN) in place of the the logistic regression for more accuracy.
@@ -18,7 +20,7 @@ As much of the teaching up to this point is in R, we wrote this tutorial with R 
 ```{r}
 
 # List of packages to check and install if missing
-packages_to_install <- c("keras", "tensorflow", "raster", "reticulate")
+packages_to_install <- c("keras", "tensorflow", "raster", "reticulate", "caret")
 
 # Check if each package is installed, and install it if missing
 for (package in packages_to_install) {
@@ -226,7 +228,9 @@ for (n in 1:predict_batch_size) {
 }
 ```
 
-## Improving the model with CNN (AI)
+# Improving the model with CNN (AI)
+
+## Configuring a more complex model
 
 Logistic regression is very good at some classification questions; however, for our test data it is not performing well. We are therefore going to apply a CCN. There are many ways to design a CNN, and below is just one that works well for this challenge. The selection of hyper parameters, i.e. the number of layers, the size of each layer is complex. Here however we have use to convolution layers (these extract features of the image) and two pooling layers (these reduce the number of dimensions of the data). We then finish by flattening the data and using a sigmoid function at the end to obtain a value between 0-1. How a convolution layer works requires a bit of knowledge on matrix algebra that is well worth learning.\
 \
@@ -286,7 +290,7 @@ historyCNN <- modelCNN %>% fit(
 plot(historyCNN)
 ```
 
-## Testing the CNN
+## Testing your CNN
 
 We can use exactly the same code as before to test out model. The CNN in this version gets more like 70% accuracy, much improved over the logistic regression model we tried. The improvement results in many more of the images being correctly annotated in the validation set.
 
@@ -322,17 +326,37 @@ for (n in 1:predict_batch_size) {
 
 ```
 
-## What next?
+## Validation with a 'Confusion Matrix'
+
+An additional way to validate our data is a confusion matrix. These are very useful for looking into the false-positive and false-negative rates. These provide some statistics on how well the model works, these would be critical in a clinical setting.
+
+```{r}
+
+  batch <- generator_next(validation_datagen)
+  images <- batch[[1]]
+  labels <- batch[[2]]
+
+  predictions<- as.numeric(modelCNN %>% 
+                             predict(images) %>%
+                             `>`(0.5) %>%
+                             k_cast("int32"))
+  
+
+  confusionMatrix(as.factor(predictions),as.factor(labels))
+  
+```
+
+# What next?
 
 There are several options on taking this forward.
 
 You could try to make the classifier more accurate, while trying reduce the problems with over-fitting. One option would be to included data augmentation (see example below), another would be to find more images to learn on. We could also alter the hyper-parameters and model design.\
 \
-Your final goal should be to try to set up a script that runs on biological data, a good source for data is https://www.kaggle.com/datasets/ambarish/breakhis or the simplified https://www.kaggle.com/datasets/forderation/breakhis-400x, but feel free to find your own.\
-\
-https://www.kaggle.com/code/azazurrehmanbutt/breakhis-images-classification-cnn
+Your final goal should be to try to set up a script that runs on biological data, a good source for data is [BreaKHis](https://www.kaggle.com/datasets/ambarish/breakhis) or the simplified [BreaKHis 400X](https://www.kaggle.com/datasets/forderation/breakhis-400x), but feel free to find your own.
 
-### Extension: Data Augmentation
+I've also provided some extenstions. These are minimal examples for you to undertake further reading on. Most of all, have fun.
+
+## Extension 1: Data Augmentation
 
 ```{r}
 # Data Augmentation: Enhance the training dataset with variations at datagen
@@ -368,7 +392,38 @@ validation_datagen_variations <- flow_images_from_directory(
   class_mode = "binary" 
 )
 
-historyCNN_variations <- modelCNN %>% fit(
+#Define CNN as before
+# Convolutional layers
+modelCNN_variations <- keras_model_sequential() %>%
+  layer_conv_2d(filters = 32, kernel_size = c(3, 3),
+                activation = "relu", input_shape = c(150, 150, 3)) %>%
+  layer_max_pooling_2d(pool_size = c(2, 2)) %>%
+  
+  layer_conv_2d(filters = 64, kernel_size = c(3, 3), activation = "relu") %>%
+  layer_max_pooling_2d(pool_size = c(2, 2)) %>%
+  
+  layer_conv_2d(filters = 128, kernel_size = c(3, 3), activation = "relu") %>%
+  layer_max_pooling_2d(pool_size = c(2, 2)) %>%
+  
+  # Flatten layer
+  layer_flatten() %>%
+  
+  # Fully connected layers
+  layer_dense(units = 512, activation = "relu") %>%
+  layer_dropout(0.5) %>%  # Dropout for regularization
+  
+  # Output layer
+  layer_dense(units = 1, activation = "sigmoid")
+
+
+# Compile the model
+modelCNN_variations %>% compile(
+  loss = "binary_crossentropy",                      # Binary cross-entropy loss
+    optimizer = optimizer_rmsprop(learning_rate = 1e-3),   # RMSprop optimizer 
+  metrics = c("accuracy")                           # Monitor accuracy during training
+)
+
+historyCNN_variations <- modelCNN_variations  %>% fit(
   train_datagen,
   steps_per_epoch = n_train_samples / batch_size,
   epochs = 20,
@@ -381,7 +436,99 @@ historyCNN_variations <- modelCNN %>% fit(
 plot(historyCNN_variations)
 ```
 
-##TESTING
+## Extension 2: Pre-trained Networks
+
+```{r}
+
+# Define the directories for training and validation data
+train_dir <- "cats_and_dogs_dataset/cats_and_dogs_filtered/train"
+validation_dir <- "cats_and_dogs_dataset/cats_and_dogs_filtered/validation"
+
+# Data Augmentation - Keeping it simple again.
+datagen <- image_data_generator(
+  rescale = 1/255,            # Rescale pixel values to the range [0, 1]
+)
+
+
+# Define the batch size
+batch_size <- 32
+
+# Create data generators for training data
+train_datagen_244 <- flow_images_from_directory(
+  train_dir,
+  generator = datagen,
+  target_size = c(224, 224),  # Note: We need to change the target size to match 
+                              # the pretrained network
+  batch_size = batch_size,
+  class_mode = "binary"  
+)
+
+# Create data generators for validation data
+validation_datagen_244 <- flow_images_from_directory(
+  validation_dir,
+  generator = datagen,
+  target_size = c(224, 224),
+  batch_size = batch_size,
+  class_mode = "binary" 
+)
+
+# Calculate the number of training samples
+n_train_samples_244 <- length(train_datagen_244$filenames)
+
+# Calculate the number of validation samples
+n_validation_samples_244 <- length(validation_datagen_244$filenames)
+
+#Define CNN, we are going to load a premade net here, helpfully this is built into the
+#R-package Keras.
+efficientnetv2_b0 <- keras$applications$EfficientNetV2B0(
+  include_top = TRUE,  # Set this to FALSE if you want to customize the top layers
+  weights = "imagenet",  # Use pre-trained weights
+)
+
+
+# Build a single layer to take the output of the pre-trained
+# CNN and connect it to our sigmoid classifier.
+model_sigmoid<- keras_model_sequential() %>%
+  
+  # Fully connected layers
+  layer_dense(units = 1000, activation = "relu") %>%
+  layer_dropout(0.5) %>%  # Dropout for regularization
+  
+  #Normlise
+  layer_batch_normalization() %>% 
+  
+  # Output layer
+  layer_dense(units = 1, activation = "sigmoid")
+
+#Combine the two networks
+combined_model <- keras_model_sequential() %>%
+  efficientnetv2_b0 %>%
+  model_sigmoid 
+
+#Compile
+combined_model %>% compile(
+  loss = "binary_crossentropy",                      
+    optimizer = optimizer_rmsprop(learning_rate = 1e-3),
+  metrics = c("accuracy")                           
+)
+
+#Train as before
+combined_model <- combined_model %>% fit(
+  train_datagen_244,
+  steps_per_epoch = n_train_samples_244 / batch_size,
+  epochs = 10,
+  validation_data = validation_datagen_244,
+  validation_steps = n_validation_samples_244 / batch_size,
+  callbacks = list(reduce_lr, early_stop)
+)
+
+
+plot(combined_model)
+
+
+```
+
+## Extension 3: Digital Pathology
 
 ```{r}
 # List of packages to check and install if missing
@@ -509,81 +656,6 @@ combined_model <- combined_model %>% fit(
 
 
 plot(combined_model)
-```
-
-```{r}
-
-
-# Test the model 
-
-  batch <- generator_next(validation_datagen_BreaKHis)
-  images <- batch[[1]]
-  labels <- batch[[2]]
-  
-  if( dim(images)[1] > 5) {
-   predict_batch_size <-  5
-  } else {
-    predict_batch_size <- dim(images)[1]
-  }
-  
-  predictions<-modelCNN %>% predict(images)
-  
-for (n in 1:predict_batch_size) {
-  image <- images[n,, , ]
-  label <- labels[n]
-  
-  # Display the image and label
-  dim(image)
-  
-  if (label==1) {label="Benign"} else {label="Malignant"}
-  if (predictions[n] > 0.5 ) {guess="Benign"} else {guess="Malignant"}
-  bImage<-brick(image)
-  crs(bImage)<-"+proj=longlat"
-  plotRGB(bImage, colNA=0, scale=1, axes=TRUE, main=paste0("Label: ", label, ",\n P=", round(predictions[n],2), ", Prediction: ",guess))
-  Sys.sleep(1) 
-}
-```
-
-Will pretrained help cat/dog\
-
-```{r}
-
-# Define the directories for training and validation data
-train_dir <- "cats_and_dogs_dataset/cats_and_dogs_filtered/train"
-validation_dir <- "cats_and_dogs_dataset/cats_and_dogs_filtered/validation"
-
-# Data Augmentation
-datagen <- image_data_generator(
-  rescale = 1/255,            # Rescale pixel values to the range [0, 1]
-)
-
-
-# Define the batch size
-batch_size <- 32
-
-# Create data generators for training data
-train_datagen <- flow_images_from_directory(
-  train_dir,
-  generator = datagen,
-  target_size = c(224, 224),
-  batch_size = batch_size,
-  class_mode = "binary"  
-)
-
-# Create data generators for validation data
-validation_datagen <- flow_images_from_directory(
-  validation_dir,
-  generator = datagen,
-  target_size = c(224, 224),
-  batch_size = batch_size,
-  class_mode = "binary" 
-)
-
-# Calculate the number of training samples
-n_train_samples <- length(train_datagen$filenames)
-
-# Calculate the number of validation samples
-n_validation_samples <- length(validation_datagen$filenames)
 ```
 
 \
