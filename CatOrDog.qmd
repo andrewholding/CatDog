@@ -37,12 +37,12 @@ Once the packages are installed you may need to install the following Python on 
 ```{r}
 # Download and install necessary Python packages (if needed)
 # within python used by R
-#
- install_tensorflow() 
- py_install("pillow")
- py_install("scipy")
- py_install("keras")
-
+# Usually don't install packages in markdown, but this is to help you get going.
+use_python("/opt/apps/eb/software/Python/3.10.8-GCCcore-12.2.0/bin/python")
+#reticulate::install_python()
+#install_tensorflow(envname = "r-tensorflow")
+#install_keras(envname = "r-tensorflow")
+#use_virtualenv("r-tensorflow")
 ```
 
 ## Downloading the training and validation data
