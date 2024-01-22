@@ -25,7 +25,7 @@ packages_to_install <- c("keras", "tensorflow", "raster", "reticulate", "caret")
 # Check if each package is installed, and install it if missing
 for (package in packages_to_install) {
   if (!requireNamespace(package, quietly = TRUE)) {
-    install.packages(package)
+    install.packages(package, repos = "http://cran.us.r-project.org")
   }
   library(package, character.only = TRUE)
 }
@@ -38,10 +38,10 @@ Once the packages are installed you may need to install the following Python on 
 # Download and install necessary Python packages (if needed)
 # within python used by R
 #
-# install_tensorflow() 
-# py_install("pillow")
-# py_install("scipy")
-# py_install("keras")
+ install_tensorflow() 
+ py_install("pillow")
+ py_install("scipy")
+ py_install("keras")
 
 ```
 
